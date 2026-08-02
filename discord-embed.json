@@ -1,0 +1,35 @@
+{
+  "username": "A-Theme",
+  "avatar_url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png",
+  "embeds": [
+    {
+      "title": "🎨 Aramaki's Tinfoil Theme Editor is here!",
+      "url": "https://github.com/A-Theme/Theme-App",
+      "description": "A full visual, in-browser editor for Tinfoil `theme.json` files — no more hand-editing raw JSON and guessing what a field does. Load a theme, tweak colors/logos/backgrounds/audio with real UI controls, preview it live, and export.",
+      "color": 49919,
+      "thumbnail": {
+        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png"
+      },
+      "image": {
+        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/banner.png"
+      },
+      "fields": [
+        {
+          "name": "✨ Features",
+          "value": "• Auto-generates a full editor from any theme.json\n• Live 16:9 preview of your actual theme layout\n• Logo preview at true size + an in-browser music tester\n• Palette generator (10 schemes) + one-click extraction from your background image\n• 100% local — nothing ever leaves your browser",
+          "inline": false
+        },
+        {
+          "name": "🚀 Get It",
+          "value": "[📁 Repo & Full Docs](https://github.com/A-Theme/Theme-App)\n[💻 Windows Desktop App](https://github.com/A-Theme/Theme-App/releases/latest)\n[📄 Sample Theme to Try](https://github.com/A-Theme/Theme-App/blob/main/sample.json)",
+          "inline": false
+        }
+      ],
+      "footer": {
+        "text": "A-Theme · Questions or theme requests? Drop them in this channel.",
+        "icon_url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png"
+      },
+      "timestamp": "2026-08-02T00:00:00.000Z"
+    }
+  ]
+}
