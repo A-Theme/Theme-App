@@ -141,7 +141,9 @@ The editor isn't hardcoded to this exact shape — if it detects a different str
 
 ## 💻 Desktop App
 
-Prefer not to open a browser? A packaged Windows desktop version is available — same app, wrapped in its own window with a taskbar icon, no browser required.
+Prefer not to open a browser? A packaged Windows desktop version is available on the [**Releases**](../../releases/latest) page — same app, wrapped in its own window with a taskbar icon, no browser required.
+
+**[⬇ Download the latest Windows build](../../releases/latest)**
 
 > **Note:** it ships as a folder, not a single `.exe` — that's normal for Electron-based apps, which bundle a full runtime alongside the executable. Unzip the whole folder and run the `.exe` from inside it.
 
