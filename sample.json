@@ -1,0 +1,55 @@
+{
+  "color": "18acdbFF",
+  "logo": "https://a-theme.ca/images/logomid.png",
+  "background": {
+    "color": "1178997A",
+    "image": "https://a-theme.ca/images/Midjourney.png"
+  },
+  "selection": {
+    "color": "45c3ebFF",
+    "background": {
+      "color": "45c3eb7A"
+    },
+    "border": {
+      "color": "45c3eb80",
+      "width": 0.5
+    }
+  },
+  "menu": {
+    "selection": {
+      "color": "45c3ebFF",
+      "background": {
+        "color": "45c3eb7f"
+      },
+      "border": {
+        "color": "45c3ebFF",
+        "width": 1
+      }
+    },
+    "background": {
+      "color": "ba3c147F"
+    }
+  },
+  "border": {
+    "color": "ba3c14FF",
+    "width": 0.5
+  },
+  "progressBar": {
+    "color": "e85c2fFF",
+    "background": {
+      "color": "117899FF"
+    },
+    "width": 0.5
+  },
+  "scrollBar": {
+    "color": "e85c2fFF",
+    "background": {
+      "color": "117899FF"
+    },
+    "width": 0.5
+  },
+  "music": {
+    "url": "sdmc:/switch/tinfoil/themes/Aramaki_Midjourney/shop-theme.mp3",
+    "volume": 5
+  }
+}

@@ -48,9 +48,10 @@ Everything runs **entirely in your browser (or as a standalone desktop app)** �
 
 ## 🚀 Quick Start
 
-1. **[Download `tinfoil-theme-editor.html`](#)** from this repo (or grab the [Windows desktop app](#-desktop-app) if you'd rather not use a browser).
+1. **[Download `tinfoil-theme-editor.html`](tinfoil-theme-editor.html)** from this repo (or grab the [Windows desktop app](#-desktop-app) if you'd rather not use a browser).
 2. Open the file in any modern browser (Chrome, Edge, or Firefox — just double-click it).
 3. Drag your `theme.json` onto the page, or use **Open theme.json**.
+   - Don't have one yet? Grab **[`sample.json`](sample.json)** from this repo — a real, complete theme file you can load straight in and start tweaking.
 4. Edit anything using the generated form — colors, image paths, numbers, toggles, all of it.
 5. Hit **Download** to export your changes.
 
@@ -136,6 +137,8 @@ This editor targets Tinfoil's `theme.json` schema, structured like:
 > Colors are 6 or 8-digit hex (`RRGGBB` or `RRGGBBAA`), usually **without** a leading `#`. The editor detects and preserves whichever style your file already uses.
 
 The editor isn't hardcoded to this exact shape — if it detects a different structure, it falls back to a generic field-by-field editor and a best-guess preview, so it's still usable for related or modified schemas.
+
+📄 Want a real, working example instead of the illustration above? This repo includes **[`sample.json`](sample.json)** — an actual theme file you can open directly in the editor to see every field in action.
 
 ---
 
