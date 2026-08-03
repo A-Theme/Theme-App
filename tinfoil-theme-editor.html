@@ -151,6 +151,38 @@
   .field:last-child{border-bottom:none;}
   .field label{font-size:12.5px;color:var(--text-1);font-family:var(--mono);word-break:break-word;}
   .field .val{display:flex;align-items:center;gap:8px;}
+  .field .val.val-color{flex-direction:column;align-items:stretch;gap:6px;}
+  .color-row{display:flex;align-items:center;gap:8px;}
+  .alpha-row{display:flex;align-items:center;gap:8px;padding-left:2px;}
+  .alpha-swatch{width:22px;height:22px;border-radius:5px;border:1px solid var(--line);flex:none;
+    background-image:linear-gradient(45deg,#3a3a3a 25%,transparent 25%),linear-gradient(-45deg,#3a3a3a 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#3a3a3a 75%),linear-gradient(-45deg,transparent 75%,#3a3a3a 75%);
+    background-size:8px 8px;background-position:0 0,0 4px,4px -4px,-4px 0;background-color:#666;}
+  .alpha-slider{flex:1;height:16px;accent-color:var(--joy-blue);cursor:pointer;min-width:70px;}
+  .alpha-label{font-size:10.5px;color:var(--text-1);font-family:var(--mono);width:36px;text-align:right;flex:none;}
+  .alpha-info{cursor:help;color:var(--text-2);font-size:12px;flex:none;}
+  .alpha-info:hover{color:var(--joy-blue);}
+
+  .explain-p{font-size:13px;line-height:1.6;color:var(--text-1);margin:0 0 16px;}
+  .explain-p code{background:var(--bg-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--text-0);font-family:var(--mono);}
+  .hex-diagram{margin-bottom:16px;}
+  .hex-diagram-chars{display:flex;font-family:var(--mono);font-size:22px;font-weight:700;border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+  .hex-diagram-chars .hc{flex:1;text-align:center;padding:10px 4px;color:#0b1420;}
+  .hc-r{background:#ff6b6b;}
+  .hc-g{background:#5be27a;}
+  .hc-b{background:#5bb8ff;}
+  .hc-a{background:repeating-linear-gradient(45deg,#4a5a70,#4a5a70 6px,#3a4a60 6px,#3a4a60 12px);color:#eaf1fa;}
+  .hex-diagram-labels{display:flex;margin-top:6px;}
+  .hex-diagram-labels .hl{flex:1;text-align:center;font-size:11px;color:var(--text-2);letter-spacing:.3px;}
+  .alpha-demo{margin-bottom:14px;}
+  .alpha-demo-strip{height:28px;border-radius:6px;border:1px solid var(--line);
+    background-image:linear-gradient(45deg,#3a3a3a 25%,transparent 25%),linear-gradient(-45deg,#3a3a3a 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#3a3a3a 75%),linear-gradient(-45deg,transparent 75%,#3a3a3a 75%);
+    background-size:10px 10px;background-position:0 0,0 5px,5px -5px,-5px 0;background-color:#666;
+    position:relative;overflow:hidden;}
+  .alpha-demo-strip::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(0,194,255,0) 0%, rgba(0,194,255,1) 100%);}
+  .alpha-demo-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text-2);}
+  .alpha-demo-labels code{background:var(--bg-2);border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--text-0);font-family:var(--mono);}
   .field input[type=text],.field input[type=number]{
     flex:1;background:var(--bg-2);border:1px solid var(--line);color:var(--text-0);border-radius:7px;padding:7px 9px;font-size:12.5px;font-family:var(--mono);
   }
@@ -252,6 +284,35 @@
         <div class="music-note" id="musicNote"></div>
       </div>
     </div>
+
+    <details class="card" id="alphaExplainer" style="margin-bottom:18px;">
+      <summary><span>ℹ️ How color + transparency (alpha) works</span><span class="cnt">click to expand</span></summary>
+      <div class="card-body">
+        <p class="explain-p">Tinfoil colors are hex codes made of up to <strong>4 pairs</strong> of characters: Red, Green, Blue, and an optional 4th pair for <strong>Alpha</strong> (transparency). Alpha isn't part of the color itself — it controls how see-through that color is when drawn on screen.</p>
+
+        <div class="hex-diagram">
+          <div class="hex-diagram-chars">
+            <span class="hc hc-r">d9</span><span class="hc hc-g">a9</span><span class="hc hc-b">93</span><span class="hc hc-a">7a</span>
+          </div>
+          <div class="hex-diagram-labels">
+            <span class="hl hl-r">Red</span><span class="hl hl-g">Green</span><span class="hl hl-b">Blue</span><span class="hl hl-a">Alpha</span>
+          </div>
+        </div>
+
+        <p class="explain-p">The alpha pair ranges from <code>00</code> (completely invisible) to <code>ff</code> (completely solid) — everything in between is partial transparency:</p>
+
+        <div class="alpha-demo">
+          <div class="alpha-demo-strip"></div>
+          <div class="alpha-demo-labels">
+            <span><code>00</code> — fully invisible</span>
+            <span><code>80</code> — 50% see-through</span>
+            <span><code>ff</code> — fully solid</span>
+          </div>
+        </div>
+
+        <p class="explain-p" style="margin-bottom:0;">Any color field with an alpha pair gets its own <strong>transparency slider</strong> right below its color picker in the form — drag it to adjust see-through-ness without touching the hex text, and watch the checkered swatch next to it update live so you can see exactly what you're getting.</p>
+      </div>
+    </details>
 
     <div class="panel" id="palettePanel" style="margin-bottom:22px;">
       <h3>Color Palette Generator</h3>
@@ -533,6 +594,23 @@
     else if(origBare.length===4) alphaSuffix = origBare[3]+origBare[3];
     return (hadHash?'#':'') + newBare + alphaSuffix;
   }
+  // Does this hex value include an alpha (transparency) channel, and if so what is it?
+  function getAlphaInfo(value){
+    const bare = bareHex(value);
+    if(bare.length === 8) return { hasAlpha:true, alphaHex: bare.slice(6,8) };
+    if(bare.length === 4) return { hasAlpha:true, alphaHex: bare[3]+bare[3] };
+    return { hasAlpha:false, alphaHex:null };
+  }
+  // Replace just the alpha byte of a hex color, keeping its RGB and original style (# / bare).
+  function setAlphaByte(value, newAlphaHex){
+    const hadHash = value.trim().startsWith('#');
+    const bare = bareHex(value);
+    let rgbPart;
+    if(bare.length === 8) rgbPart = bare.slice(0,6);
+    else if(bare.length === 4) rgbPart = bare[0]+bare[0]+bare[1]+bare[1]+bare[2]+bare[2];
+    else rgbPart = bare.slice(0,6).padEnd(6,'0');
+    return (hadHash?'#':'') + rgbPart + newAlphaHex;
+  }
   function getByPath(obj, path){
     return path.reduce((o,k)=> (o==null? undefined : o[k]), obj);
   }
@@ -701,27 +779,81 @@
       valWrap.appendChild(tag);
 
     }else if(isHexColor(value)){
+      valWrap.classList.add('val-color');
+
       const picker = document.createElement('input');
       picker.type = 'color';
       picker.value = colorInputValue(value);
       const text = document.createElement('input');
       text.type = 'text';
       text.value = value;
+      const tag = document.createElement('span'); tag.className='type-tag'; tag.textContent='color';
+
+      const row1 = document.createElement('div');
+      row1.className = 'color-row';
+      row1.appendChild(picker);
+      row1.appendChild(text);
+      row1.appendChild(tag);
+      valWrap.appendChild(row1);
+
+      const alphaRow = document.createElement('div');
+      alphaRow.className = 'alpha-row';
+      const swatch = document.createElement('div');
+      swatch.className = 'alpha-swatch';
+      swatch.title = 'Preview at current transparency';
+      const alphaSlider = document.createElement('input');
+      alphaSlider.type = 'range';
+      alphaSlider.className = 'alpha-slider';
+      alphaSlider.min = '0'; alphaSlider.max = '255'; alphaSlider.step = '1';
+      const alphaLabel = document.createElement('span');
+      alphaLabel.className = 'alpha-label';
+      const infoIcon = document.createElement('span');
+      infoIcon.className = 'alpha-info';
+      infoIcon.textContent = '\u24d8';
+      infoIcon.title = 'The last two hex digits control transparency (alpha): 00 = fully invisible, ff = fully solid. Drag this slider to change it without editing hex by hand.';
+      alphaRow.appendChild(swatch);
+      alphaRow.appendChild(alphaSlider);
+      alphaRow.appendChild(alphaLabel);
+      alphaRow.appendChild(infoIcon);
+      valWrap.appendChild(alphaRow);
+
+      function syncAlphaUI(){
+        const info = getAlphaInfo(text.value);
+        if(info.hasAlpha){
+          alphaRow.style.display = 'flex';
+          const a = parseInt(info.alphaHex, 16);
+          alphaSlider.value = String(a);
+          alphaLabel.textContent = Math.round(a/255*100) + '%';
+          swatch.style.background = toCssColor(text.value);
+        }else{
+          alphaRow.style.display = 'none';
+        }
+      }
+
       picker.oninput = ()=>{
         const newVal = restyleColor(picker.value, text.value);
         text.value = newVal;
         setByPath(data, path, newVal);
+        syncAlphaUI();
         renderPreview();
       };
       text.oninput = ()=>{
         setByPath(data, path, text.value);
         if(isHexColor(text.value)) picker.value = colorInputValue(text.value);
+        syncAlphaUI();
         renderPreview();
       };
-      valWrap.appendChild(picker);
-      valWrap.appendChild(text);
-      const tag = document.createElement('span'); tag.className='type-tag'; tag.textContent='color';
-      valWrap.appendChild(tag);
+      alphaSlider.oninput = ()=>{
+        const hex2 = parseInt(alphaSlider.value, 10).toString(16).padStart(2,'0');
+        const newVal = setAlphaByte(text.value, hex2);
+        text.value = newVal;
+        setByPath(data, path, newVal);
+        alphaLabel.textContent = Math.round(alphaSlider.value/255*100) + '%';
+        swatch.style.background = toCssColor(newVal);
+        renderPreview();
+      };
+
+      syncAlphaUI();
 
     }else if(typeof value === 'string'){
       const text = document.createElement('input');
