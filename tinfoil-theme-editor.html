@@ -2,6 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1420">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="A visual, in-browser editor for Tinfoil theme.json files.">
+
+<!-- PWA / Add to Home Screen -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tinfoil Theme Editor">
+
 <title>Aramaki's Tinfoil Theme Editor</title>
 <style>
   :root{
@@ -208,6 +222,69 @@
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg-2);border:1px solid var(--joy-blue);
     color:var(--text-0);padding:9px 16px;border-radius:8px;font-size:12.5px;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;}
   .toast.show{opacity:1;transform:translate(-50%,-6px);}
+
+  /* ---------- Mobile / touch (Android + iOS) ---------- */
+  @media (max-width: 760px){
+    body{ -webkit-tap-highlight-color: transparent; }
+    .wrap{ padding: 16px 12px 90px; }
+
+    /* header stacks, controls become a full-width wrapping row of equal touch targets */
+    .head{ flex-direction: column; align-items: stretch; gap: 14px; }
+    .controls{ width: 100%; }
+    .controls button, .controls .filebtn{
+      flex: 1 1 calc(50% - 8px); justify-content: center; padding: 12px 10px; font-size: 13.5px; min-height: 44px;
+    }
+
+    /* single-column main layout; sidebar becomes a normal (non-sticky) block above the fields */
+    .main{ grid-template-columns: 1fr; gap: 14px; }
+    .side{ position: static; }
+    .side .toc{ max-height: 160px; overflow-y: auto; }
+
+    /* fields stack label above control instead of a fixed 170px column */
+    .field{ grid-template-columns: 1fr; gap: 6px; padding: 10px 0; }
+    .field label{ font-size: 12px; }
+    .color-row, .val{ flex-wrap: wrap; }
+    .field input[type=text], .field input[type=number]{ min-height: 40px; font-size: 14px; }
+    .field input[type=color]{ width: 40px; height: 38px; }
+    .field input[type=checkbox]{ width: 22px; height: 22px; }
+
+    /* alpha slider row needs a bit more room for a thumb-friendly drag target */
+    .alpha-slider{ height: 24px; }
+    .alpha-swatch{ width: 28px; height: 28px; }
+
+    /* preview + side panels stack full width */
+    .panel-row{ flex-direction: column; }
+    .panel{ min-width: 0; }
+    #previewSurface{ max-width: 100%; }
+
+    /* palette controls stack, still touch-sized */
+    .palette-controls{ flex-direction: column; align-items: stretch; }
+    .palette-controls select, .palette-controls input[type=color]{ width: 100%; min-height: 42px; }
+    .pswatch input[type=color]{ width: 44px; height: 44px; }
+
+    /* palette field-mapping table collapses to stacked rows */
+    .map-row{ grid-template-columns: 1fr; gap: 6px; }
+    .map-row select{ min-height: 40px; }
+
+    /* extraction / local-file rows stack cleanly */
+    .extract-actions, .local-row{ flex-direction: column; align-items: stretch; }
+    .extract-actions .filebtn, .extract-actions button{ text-align: center; min-height: 42px; }
+
+    /* raw JSON textarea a bit shorter so it doesn't dominate a phone screen */
+    .rawtoggle textarea{ height: 200px; font-size: 13px; }
+
+    /* explainer diagram scales its type down slightly on narrow screens */
+    .hex-diagram-chars{ font-size: 16px; }
+
+    /* general touch-target floor for anything still using .mini */
+    .mini{ min-height: 34px; padding: 6px 10px; }
+  }
+
+  @media (max-width: 420px){
+    .brand h1{ font-size: 16px; }
+    .controls button, .controls .filebtn{ flex-basis: 100%; }
+    .hex-diagram-chars{ font-size: 13px; }
+  }
 </style>
 </head>
 <body>
@@ -1690,6 +1767,16 @@
   });
 
 })();
+
+// Register the service worker for offline/installed-app use. This only
+// works when the file is actually hosted (https:// or localhost) — when
+// opened directly as a local file (file://), registration silently no-ops
+// and the app works exactly the same, just without offline caching.
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* non-fatal */ });
+  });
+}
 </script>
 </body>
 </html>

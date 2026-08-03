@@ -8,6 +8,7 @@ No installs. No command line. Just open it and drag in a theme.
 [![Made for Tinfoil](https://img.shields.io/badge/made%20for-Tinfoil-1e2327?style=flat-square)](https://github.com/Huntereb/Tinfoil)
 [![Runs in Browser](https://img.shields.io/badge/runs%20in-browser-00c2ff?style=flat-square)](#-quick-start)
 [![Windows App Available](https://img.shields.io/badge/windows-desktop%20app-ff3c50?style=flat-square)](#-desktop-app)
+[![Mobile Friendly](https://img.shields.io/badge/android%20%26%20ios-friendly-5be27a?style=flat-square)](#-mobile-android--ios)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square)](#-license)
 
 [Quick Start](#-quick-start) •
@@ -15,6 +16,7 @@ No installs. No command line. Just open it and drag in a theme.
 [How to Use](#-how-to-use) •
 [Supported Format](#-supported-theme-format) •
 [Desktop App](#-desktop-app) •
+[Mobile](#-mobile-android--ios) •
 [FAQ](#-faq)
 
 </div>
@@ -35,6 +37,8 @@ Everything runs **entirely in your browser (or as a standalone desktop app)** �
 
 - **🗂️ Auto-generated editor** — drop in any `theme.json` and get a full form built from its actual structure: nested objects become collapsible sections, arrays get add/remove controls, no schema hardcoding required.
 - **🎨 Smart color fields** — automatically detects hex colors in *any* format Tinfoil themes use (`#rrggbb`, bare `rrggbbaa`, with or without alpha) and gives you a real color picker next to the raw value, always writing back in the exact original style.
+- **🌗 Transparency (alpha) made visual** — any color with an alpha channel gets its own drag slider and a checkerboard live-preview swatch, plus a built-in diagram explaining how the hex format works, so you never have to guess what those last two digits do.
+- **📱 Android & iOS friendly** — fully responsive touch layout, and installable straight to your home screen as a standalone app (see [Mobile](#-mobile-android--ios) below).
 - **🖼️ Live 16:9 preview** — a pixel-accurate mockup of the actual Tinfoil layout (grid, selection highlight, scrollbar, progress bar, context menu) built from your theme's real values, with a generic fallback preview for non-standard schemas.
 - **🏷️ Logo preview panel** — see your logo at true size with real pixel dimensions, including themes that point at dynamic `.php` endpoints instead of static image files.
 - **🎵 Music/audio tester** — play back any audio field directly in the browser, with a local-file fallback for `sdmc:/`-style paths a browser can't fetch on its own.
@@ -149,6 +153,32 @@ Prefer not to open a browser? A packaged Windows desktop version is available on
 **[⬇ Download the latest Windows build](../../releases/latest)**
 
 > **Note:** it ships as a folder, not a single `.exe` — that's normal for Electron-based apps, which bundle a full runtime alongside the executable. Unzip the whole folder and run the `.exe` from inside it.
+
+---
+
+## 📱 Mobile (Android & iOS)
+
+The app is fully responsive and works right in your phone's browser — no app store, no install required. Open `tinfoil-theme-editor.html` in Chrome (Android) or Safari (iOS) and it lays out for a touch screen automatically: stacked fields, larger tap targets, a full-width live preview, everything.
+
+It can also be **installed as a home-screen app** (a Progressive Web App) so it opens full-screen with its own icon, exactly like a native app. This requires the file to be served over `https://` rather than opened locally — the easiest way is enabling **GitHub Pages** for this repo (**Settings → Pages → Deploy from branch → `main`**), which gives you a URL like:
+
+```
+https://a-theme.github.io/Theme-App/tinfoil-theme-editor.html
+```
+
+Once that's live:
+
+**On Android (Chrome):**
+1. Open the URL above
+2. Tap the **⋮** menu → **Add to Home screen** (Chrome may also prompt automatically)
+3. Confirm — it now launches full-screen from your home screen, with offline support for the app itself
+
+**On iOS (Safari):**
+1. Open the URL above
+2. Tap the **Share** icon → **Add to Home Screen**
+3. Confirm — same result: a full-screen home-screen app with its own icon
+
+> Note: your theme's own background image, logo, or audio URLs still need an internet connection to load if they're hosted remotely — installing the app itself works offline, but *your theme's own remote assets* don't get bundled into that.
 
 ---
 

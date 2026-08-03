@@ -1,0 +1,31 @@
+{
+  "name": "Aramaki's Tinfoil Theme Editor",
+  "short_name": "Theme Editor",
+  "description": "A visual, in-browser editor for Tinfoil theme.json files.",
+  "start_url": "./tinfoil-theme-editor.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1420",
+  "theme_color": "#0b1420",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
