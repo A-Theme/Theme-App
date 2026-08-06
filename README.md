@@ -17,6 +17,7 @@ No installs. No command line. Just open it and drag in a theme.
 [Supported Format](#-supported-theme-format) •
 [Desktop App](#-desktop-app) •
 [Mobile](#-mobile-android--ios) •
+[On-Console](#-on-console-installer-experimental) •
 [FAQ](#-faq)
 
 </div>
@@ -195,6 +196,14 @@ If your `theme.json` points to an `sdmc:/` path, that's a Nintendo Switch SD car
 
 **Where can I find more Tinfoil themes?**
 Check out [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) for a large collection of ready-made themes, or join the Discord linked there for requests.
+
+---
+
+## 🎮 On-Console Installer (experimental)
+
+This editor is intentionally a browser/desktop/mobile tool — a Switch controller is a poor fit for color pickers and JSON editing. But there's a companion project: **[A-Theme/Switch-Theme-Installer](https://github.com/A-Theme/Switch-Theme-Installer)**, a native homebrew `.nro` app that browses this repo's themes and installs the one you pick directly onto your SD card, no computer needed.
+
+> ⚠️ **Status:** the source is written and complete, but hasn't been compiled or tested on real hardware yet (see that repo's README for why). If you build homebrew and want to help get it running, everything you need is there.
 
 ---
 
