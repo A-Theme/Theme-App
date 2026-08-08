@@ -17,7 +17,7 @@ No installs. No command line. Just open it and drag in a theme.
 [Supported Format](#-supported-theme-format) •
 [Desktop App](#-desktop-app) •
 [Mobile](#-mobile-android--ios) •
-[On-Console](#-on-console-installer-experimental) •
+[On-Console](#-on-console-installer) •
 [FAQ](#-faq)
 
 </div>
@@ -199,11 +199,16 @@ Check out [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) fo
 
 ---
 
-## 🎮 On-Console Installer (experimental)
+## 🎮 On-Console Installer
 
-This editor is intentionally a browser/desktop/mobile tool — a Switch controller is a poor fit for color pickers and JSON editing. But there's a companion project: **[A-Theme/Switch-Theme-Installer](https://github.com/A-Theme/Switch-Theme-Installer)**, a native homebrew `.nro` app that browses this repo's themes and installs the one you pick directly onto your SD card, no computer needed.
+This editor is intentionally a browser/desktop/mobile tool — a Switch controller is a poor fit for color pickers and JSON editing. But there's a companion project: **[A-Theme/Switch-Theme-Installer](https://github.com/A-Theme/Switch-Theme-Installer)**, a native homebrew `.nro` app that reads this repo's `themes.json` directly, lets you browse and preview themes with a controller, and installs whichever one you keep straight onto your SD card — no computer needed.
 
-> ⚠️ **Status:** the source is written and complete, but hasn't been compiled or tested on real hardware yet (see that repo's README for why). If you build homebrew and want to help get it running, everything you need is there.
+It's had real hardware testing and several rounds of fixes already. What it can do:
+- Browse the full theme list, install any theme immediately
+- **Preview a theme's actual colors and layout** before committing — background, logo, selection colors, border, progress bar, built from the theme's real values
+- **Regenerate a theme's palette straight from its own background image**, right on the preview screen — real color clustering, applied directly to the theme's fields, with a live-updating preview and the option to try again for a different result
+
+> ⚠️ **Status:** the core JSON/color logic has been independently verified (compiled and run against real theme data before ever touching a Switch), and the app has gone through multiple real build-and-fix cycles on hardware — but it's still an actively developed homebrew project, not a finished release. See that repo's README for the current state and its own build instructions.
 
 ---
 
