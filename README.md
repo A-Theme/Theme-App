@@ -36,6 +36,7 @@ Everything runs **entirely in your browser (or as a standalone desktop app)** �
 
 ## ✨ Features
 
+- **🌐 Browse & load themes from the community database** — no file needed to get started: pull up the live list of every theme in [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes), search it, and load one straight into the editor. Downloads and extracts the theme's `.zip` right in your browser (using an embedded copy of JSZip — nothing sent to any server), and keeps its bundled logo/background/audio files working automatically in every preview, no extra setup.
 - **🗂️ Auto-generated editor** — drop in any `theme.json` and get a full form built from its actual structure: nested objects become collapsible sections, arrays get add/remove controls, no schema hardcoding required.
 - **🎨 Smart color fields** — automatically detects hex colors in *any* format Tinfoil themes use (`#rrggbb`, bare `rrggbbaa`, with or without alpha) and gives you a real color picker next to the raw value, always writing back in the exact original style.
 - **🌗 Transparency (alpha) made visual** — any color with an alpha channel gets its own drag slider and a checkerboard live-preview swatch, plus a built-in diagram explaining how the hex format works, so you never have to guess what those last two digits do.
@@ -55,8 +56,8 @@ Everything runs **entirely in your browser (or as a standalone desktop app)** �
 
 1. **[Download `tinfoil-theme-editor.html`](tinfoil-theme-editor.html)** from this repo (or grab the [Windows desktop app](#-desktop-app) if you'd rather not use a browser).
 2. Open the file in any modern browser (Chrome, Edge, or Firefox — just double-click it).
-3. Drag your `theme.json` onto the page, or use **Open theme.json**.
-   - Don't have one yet? Grab **[`sample.json`](sample.json)** from this repo — a real, complete theme file you can load straight in and start tweaking.
+3. Click **🌐 Browse Themes** to pick a starting point from the live community collection — or drag your own `theme.json` onto the page, or use **Open theme.json**.
+   - Don't have one yet and don't want to browse? Grab **[`sample.json`](sample.json)** from this repo — a real, complete theme file you can load straight in and start tweaking.
 4. Edit anything using the generated form — colors, image paths, numbers, toggles, all of it.
 5. Hit **Download** to export your changes.
 
@@ -67,8 +68,9 @@ No build step. No dependencies. No install. It's one HTML file.
 ## 📖 How to Use
 
 ### Loading a theme
-You can get your `theme.json` into the editor three ways:
-- **Drag and drop** the file onto the page
+You can get a theme into the editor four ways:
+- **Browse the community database** — click **🌐 Browse Themes**, search the live list pulled from this repo's `themes.json`, and click one. It downloads and extracts that theme's `.zip` right in your browser (no server involved — an embedded copy of [JSZip](https://stuk.github.io/jszip/) does the unzipping client-side) and loads its config straight into the editor. Every other file bundled in that zip (logo, background image, audio) stays available too, so previews work immediately without any extra setup.
+- **Drag and drop** your own `theme.json` onto the page
 - Click **📂 Open theme.json** and pick it from a file dialog
 - **Paste raw JSON** directly into the text box on the start screen
 
@@ -186,16 +188,19 @@ Once that's live:
 ## ❓ FAQ
 
 **Does this upload my theme file anywhere?**
-No. Everything happens locally in your browser using JavaScript — nothing is sent to a server.
+No — nothing you load, edit, or export ever leaves your browser. The one thing that *does* talk to the network is the **Browse Themes** feature, which fetches the public theme list and zip files from this repo (and displays what's already public there) — it never sends anything back.
+
+**How does "Browse Themes" work without a server?**
+It fetches `themes.json` and the selected theme's `.zip` directly from GitHub, then unzips it entirely client-side using an embedded copy of [JSZip](https://stuk.github.io/jszip/) — the same trust model as any other static webpage, just doing the unzipping in JavaScript instead of on a server.
 
 **Can I use this for themes that don't quite follow the standard schema?**
 Yes — the field editor works on arbitrary JSON structures. The live preview is most accurate for the standard schema shown above, but falls back gracefully otherwise.
 
 **Why can't I see my logo or hear my music preview?**
-If your `theme.json` points to an `sdmc:/` path, that's a Nintendo Switch SD card path a browser can't reach. Use the **Browse local file** option in the Logo or Music panel to preview the actual file from your computer instead.
+If your `theme.json` points to an `sdmc:/` path, that's a Nintendo Switch SD card path a browser can't reach on its own. If you loaded the theme via **🌐 Browse Themes**, this is already handled automatically — its bundled logo/audio files are used directly. If you loaded a `theme.json` manually and it references local files you don't have, use the **Browse local file** option in the Logo or Music panel to preview the actual file from your computer instead.
 
 **Where can I find more Tinfoil themes?**
-Check out [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) for a large collection of ready-made themes, or join the Discord linked there for requests.
+Check out [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) for a large collection of ready-made themes (or just click **🌐 Browse Themes** right in the editor), or join the Discord linked there for requests.
 
 ---
 
