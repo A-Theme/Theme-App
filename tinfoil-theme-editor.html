@@ -90,6 +90,25 @@
   .tf-progress-label{font-size:8px;margin-bottom:3px;opacity:.85;}
   .tf-menu{position:absolute;border-radius:6px;overflow:hidden;box-shadow:0 8px 22px rgba(0,0,0,.45);}
   .tf-menu-item{padding:5px 12px;font-size:9.5px;white-space:nowrap;}
+
+  /* preview hover-to-edit tooltips */
+  [data-field-path]{cursor:pointer;transition:outline-color .12s;outline:1px solid transparent;outline-offset:2px;}
+  [data-field-path]:hover{outline-color:rgba(0,194,255,.55);}
+  #previewSurface{outline:none !important;} /* the whole box is itself hoverable (for "background"), but shouldn't outline as a whole — only its specific pieces do */
+  .preview-tooltip{position:fixed;z-index:2000;pointer-events:none;background:var(--bg-2);border:1px solid var(--joy-blue);
+    border-radius:8px;padding:8px 11px;font-size:11.5px;color:var(--text-0);box-shadow:0 8px 24px rgba(0,0,0,.4);
+    max-width:260px;opacity:0;transform:translateY(4px);transition:opacity .1s,transform .1s;}
+  .preview-tooltip.show{opacity:1;transform:translateY(0);}
+  .preview-tooltip strong{display:block;font-size:12px;margin-bottom:3px;color:var(--joy-blue);}
+  .preview-tooltip code{display:block;font-family:var(--mono);color:var(--text-1);font-size:10.5px;word-break:break-all;margin-bottom:4px;}
+  .preview-tooltip .hint{font-size:10px;color:var(--text-2);}
+
+  /* flash highlight when jumping to a field from the preview */
+  @keyframes fieldJumpFlash{
+    0%{background:rgba(0,194,255,.28);box-shadow:0 0 0 2px rgba(0,194,255,.5);}
+    100%{background:transparent;box-shadow:0 0 0 2px transparent;}
+  }
+  .field-jump-flash{animation:fieldJumpFlash 1.7s ease-out;border-radius:8px;}
   .tf-tag{position:absolute;font-size:8px;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.5);
     background:rgba(0,0,0,.35);padding:2px 5px;border-radius:3px;pointer-events:none;}
 
@@ -901,6 +920,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const field = document.createElement('div');
     field.className = 'field';
     field.dataset.key = key;
+    field.dataset.path = path.join('.');
 
     const label = document.createElement('label');
     label.textContent = key;
@@ -1153,14 +1173,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     surface.style.backgroundImage = bgImageSrc ? `url("${bgImageSrc}")` : 'none';
     surface.style.backgroundColor = bgColor;
     surface.style.color = colorOr(['color'], '#eaf1fa');
+    surface.dataset.fieldPath = 'background.color,background.image';
+    surface.dataset.fieldLabel = 'Background';
 
-    // logo, top-left
+    // logo, top-left — a locally-browsed file (if any) takes priority
+    // over the theme's own logo field, so testing a replacement logo
+    // shows up here immediately, not just in the Logo Preview panel.
     const logo = get(['logo']);
-    if(typeof logo === 'string' && logo){
+    const logoSrc = localLogoUrl || ((typeof logo === 'string' && logo) ? (resolveAssetSrc(logo) || logo) : null);
+    if(logoSrc){
       const img = document.createElement('img');
       img.className = 'tf-logo';
-      img.src = resolveAssetSrc(logo) || logo;
-      img.title = 'logo';
+      img.src = logoSrc;
+      img.dataset.fieldPath = 'logo';
+      img.dataset.fieldLabel = localLogoUrl ? 'Logo (local file preview)' : 'Logo';
       img.style.top = px(14)+'px';
       img.style.left = px(14)+'px';
       img.style.maxHeight = px(48)+'px';
@@ -1179,7 +1205,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const gridTop = px(84), gridLeft = px(14), gridRight = px(96); // leave room for scrollbar
     const grid = document.createElement('div');
     grid.className = 'tf-grid';
-    grid.title = 'icons.medium (' + medW + 'px icon, ' + medM + 'px margin)';
+    grid.dataset.fieldPath = 'border.color,border.width,icons.medium.width,icons.medium.margin';
+    grid.dataset.fieldLabel = 'Border & icon grid';
     grid.style.top = gridTop+'px';
     grid.style.left = gridLeft+'px';
     grid.style.right = gridRight+'px';
@@ -1209,9 +1236,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       if(i === 2){ // the "selected" tile — demonstrates selection.*
         tile.style.background = selBg;
         tile.style.border = selBorderWidth+'px solid '+selBorderColor;
-        tile.title = 'selection.background.color / selection.border.color';
+        tile.dataset.fieldPath = 'selection.background.color,selection.border.color';
+        tile.dataset.fieldLabel = 'Selection (accent)';
         label.style.color = selColor;
-        label.title = 'selection.color';
+        label.dataset.fieldPath = 'selection.color';
+        label.dataset.fieldLabel = 'Selection text color';
       }
       tile.appendChild(label);
       grid.appendChild(tile);
@@ -1224,7 +1253,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const sbWidth = Math.max(3, px(get(['scrollBar','width'], 0.5) * 12));
     const track = document.createElement('div');
     track.className = 'tf-scrollbar-track';
-    track.title = 'scrollBar.background.color';
+    track.dataset.fieldPath = 'scrollBar.background.color';
+    track.dataset.fieldLabel = 'Scrollbar track';
     track.style.right = px(24)+'px';
     track.style.top = gridTop+'px';
     track.style.bottom = px(52)+'px';
@@ -1233,7 +1263,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     track.style.borderRadius = (sbWidth/2)+'px';
     const thumb = document.createElement('div');
     thumb.className = 'tf-scrollbar-thumb';
-    thumb.title = 'scrollBar.color';
+    thumb.dataset.fieldPath = 'scrollBar.color';
+    thumb.dataset.fieldLabel = 'Scrollbar';
     thumb.style.width = sbWidth+'px';
     thumb.style.top = '8%';
     thumb.style.height = '38%';
@@ -1253,12 +1284,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     pwrap.appendChild(plabel);
     const ptrack = document.createElement('div');
     ptrack.className = 'tf-progress-track';
-    ptrack.title = 'progressBar.background.color';
+    ptrack.dataset.fieldPath = 'progressBar.background.color';
+    ptrack.dataset.fieldLabel = 'Progress bar track';
     ptrack.style.height = pbHeight+'px';
     ptrack.style.background = pbBg;
     const pfill = document.createElement('div');
     pfill.className = 'tf-progress-fill';
-    pfill.title = 'progressBar.color';
+    pfill.dataset.fieldPath = 'progressBar.color';
+    pfill.dataset.fieldLabel = 'Progress bar fill';
     pfill.style.width = '64%';
     pfill.style.background = pbColor;
     ptrack.appendChild(pfill);
@@ -1279,7 +1312,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       menu.style.right = px(110)+'px';
       menu.style.top = px(150)+'px';
       menu.style.minWidth = px(150)+'px';
-      menu.title = 'menu.background.color';
+      menu.dataset.fieldPath = 'menu.background.color';
+      menu.dataset.fieldLabel = 'Context menu background';
       const items = ['Download', 'Show info', 'Delete'];
       items.forEach((label, i)=>{
         const item = document.createElement('div');
@@ -1289,7 +1323,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           item.style.background = menuSelBg;
           item.style.color = menuSelColor;
           item.style.borderLeft = menuSelBorderWidth+'px solid '+menuSelBorderColor;
-          item.title = 'menu.selection.*';
+          item.dataset.fieldPath = 'menu.selection.color,menu.selection.background.color,menu.selection.border.color';
+          item.dataset.fieldLabel = 'Context menu selection';
         }
         menu.appendChild(item);
       });
@@ -1338,10 +1373,95 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       chip.style.height = '40px';
       chip.style.borderRadius = '6px';
       chip.style.background = toCssColor(accentLeaf.value);
-      chip.title = accentLeaf.path.join('.');
+      chip.dataset.fieldPath = accentLeaf.path.join('.');
+      chip.dataset.fieldLabel = 'Accent color';
       surface.appendChild(chip);
     }
   }
+
+  // ---------- interactive preview: hover tooltips + click-to-jump ----------
+  // Every part of the live preview that maps to an editable field carries
+  // data-field-path/data-field-label (set in buildTinfoilMockup /
+  // buildGenericMockup). Hovering shows what it is; clicking scrolls the
+  // form down to it and briefly highlights it, so there's no guessing
+  // which section further down the page actually controls what you're
+  // looking at.
+  const previewTooltip = document.createElement('div');
+  previewTooltip.className = 'preview-tooltip';
+  document.body.appendChild(previewTooltip);
+
+  function friendlyFieldPath(pathStr){
+    // Show only the first path when an element maps to multiple fields
+    // (e.g. a tile's background maps to both selection.background.color
+    // and selection.border.color) — full list stays in the tooltip body.
+    return pathStr.split(',').map(p=>p.trim()).join('  \u00b7  ');
+  }
+
+  function showPreviewTooltip(x, y, label, pathStr){
+    previewTooltip.innerHTML =
+      '<strong>' + escapeHtml(label) + '</strong>' +
+      '<code>' + escapeHtml(friendlyFieldPath(pathStr)) + '</code>' +
+      '<span class="hint">Click to jump to this field below</span>';
+    previewTooltip.classList.add('show');
+    positionPreviewTooltip(x, y);
+  }
+  function positionPreviewTooltip(x, y){
+    const pad = 14;
+    let left = x + pad, top = y + pad;
+    const rect = previewTooltip.getBoundingClientRect();
+    if(left + rect.width > window.innerWidth - 10) left = x - rect.width - pad;
+    if(top + rect.height > window.innerHeight - 10) top = y - rect.height - pad;
+    previewTooltip.style.left = Math.max(8,left) + 'px';
+    previewTooltip.style.top = Math.max(8,top) + 'px';
+  }
+  function hidePreviewTooltip(){
+    previewTooltip.classList.remove('show');
+  }
+
+  // Opens every ancestor <details> section so the target field is
+  // actually visible, scrolls it into view, and gives it a brief glowing
+  // highlight so it's unmistakable which row the preview pointed at.
+  function scrollToFieldPath(pathStr){
+    const firstPath = pathStr.split(',')[0].trim();
+    let el;
+    try{
+      el = document.querySelector('.field[data-path="' + CSS.escape(firstPath) + '"]');
+    }catch(e){
+      el = Array.from(document.querySelectorAll('.field')).find(f => f.dataset.path === firstPath);
+    }
+    if(!el){
+      showToast('Could not find that field below \u2014 it may not exist in this file');
+      return;
+    }
+    let node = el.parentElement;
+    while(node){
+      if(node.tagName === 'DETAILS') node.open = true;
+      node = node.parentElement;
+    }
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.remove('field-jump-flash');
+    void el.offsetWidth; // restart the animation if clicked again quickly
+    el.classList.add('field-jump-flash');
+    setTimeout(()=> el.classList.remove('field-jump-flash'), 1700);
+  }
+
+  ['previewSurface'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('mousemove', (e)=>{
+      const target = e.target.closest('[data-field-path]');
+      if(target){
+        showPreviewTooltip(e.clientX, e.clientY, target.dataset.fieldLabel || 'Field', target.dataset.fieldPath);
+      }else{
+        hidePreviewTooltip();
+      }
+    });
+    el.addEventListener('mouseleave', hidePreviewTooltip);
+    el.addEventListener('click', (e)=>{
+      const target = e.target.closest('[data-field-path]');
+      if(target && target.dataset.fieldPath) scrollToFieldPath(target.dataset.fieldPath);
+    });
+  });
 
   // ---------- logo preview ----------
   function escapeHtml(s){
@@ -1421,6 +1541,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     localLogoUrl = URL.createObjectURL(f);
     localLogoName = f.name;
     renderLogoPreview();
+    renderPreview();
   });
   document.getElementById('logoRevertBtn').addEventListener('click', ()=>{
     if(localLogoUrl) URL.revokeObjectURL(localLogoUrl);
@@ -1428,6 +1549,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     localLogoName = '';
     logoFileInput.value = '';
     renderLogoPreview();
+    renderPreview();
   });
 
   // ---------- music / audio preview ----------
@@ -1810,7 +1932,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       extractInfo.innerHTML = 'No background image detected in this file.';
       extractBtn.disabled = true;
     }else{
-      extractInfo.innerHTML = 'Background image: <code>' + escapeHtml(url) + '</code>';
+      const resolved = resolveAssetSrc(url);
+      const bundledNote = (resolved && resolved.startsWith('blob:'))
+        ? ' <span style="color:var(--joy-blue);">(bundled with this theme \u2014 ready to extract)</span>'
+        : '';
+      extractInfo.innerHTML = 'Background image: <code>' + escapeHtml(url) + '</code>' + bundledNote;
       extractBtn.disabled = false;
     }
   }
@@ -1820,13 +1946,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const originalLabel = extractBtn.textContent;
     extractBtn.disabled = true;
     extractBtn.textContent = 'Extracting\u2026';
+    // If this theme was loaded from the community browser, its background
+    // may be a bundled local file rather than a remote URL — resolve that
+    // first so extraction reads the real bundled asset instead of trying
+    // (and failing) to fetch a bare filename or sdmc: path.
+    const resolved = resolveAssetSrc(url);
+    const isBundled = !!(resolved && resolved.startsWith('blob:'));
+    const fetchUrl = resolved || url;
     try{
-      const hexColors = await extractColorsFromUrl(url, false);
+      const hexColors = await extractColorsFromUrl(fetchUrl, isBundled);
       extractedPalette = hexColors;
       renderExtractedSwatches(hexColors);
       showToast('Extracted ' + hexColors.length + ' colors from the background image');
     }catch(err){
-      const isDeviceScheme = !/^https?:\/\//i.test(url);
+      const isDeviceScheme = !isBundled && !/^https?:\/\//i.test(url);
       extractInfo.innerHTML = 'Could not read colors from <code>' + escapeHtml(url) + '</code>' +
         (isDeviceScheme
           ? ' \u2014 this looks like a device path a browser can not fetch.'
