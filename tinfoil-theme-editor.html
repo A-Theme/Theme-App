@@ -143,6 +143,20 @@
   .palette-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
   .palette-controls input[type=color]{width:38px;height:34px;border:1px solid var(--line);border-radius:7px;background:none;padding:0;cursor:pointer;}
   .palette-controls select{background:var(--bg-2);border:1px solid var(--line);color:var(--text-0);border-radius:7px;padding:8px 10px;font-size:12.5px;font-family:var(--sans);}
+  .palette-controls input[type=number]{background:var(--bg-2);border:1px solid var(--line);color:var(--text-0);border-radius:7px;padding:8px 6px;font-size:12.5px;font-family:var(--sans);text-align:center;}
+  .palette-count-wrap{display:flex;align-items:center;}
+  #colorWarningsPanel{padding:10px 14px;}
+  #colorWarningsPanel h3{margin:0 0 6px;font-size:11.5px;}
+  .cw-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:11.5px;}
+  .cw-row:last-child{border-bottom:none;}
+  .cw-swatches{display:flex;gap:2px;flex:none;}
+  .cw-dot{width:13px;height:13px;border-radius:50%;border:1px solid rgba(255,255,255,.3);}
+  .cw-label{flex:1;color:var(--text-1);font-family:var(--mono);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cw-ratio{color:#e8a33d;font-size:10.5px;flex:none;}
+  .cw-apply{display:flex;align-items:center;gap:5px;background:var(--bg-2);border:1px solid #e8a33d;color:#e8a33d;
+    border-radius:6px;padding:3px 9px 3px 5px;font-size:11px;cursor:pointer;flex:none;font-family:var(--sans);}
+  .cw-apply:hover{background:#e8a33d;color:var(--bg-0);}
+  .cw-preview-dot{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.4);flex:none;}
   .palette-swatches{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
   .pswatch{display:flex;flex-direction:column;align-items:center;gap:6px;}
   .pswatch input[type=color]{width:52px;height:52px;border-radius:10px;border:1px solid var(--line);padding:0;cursor:pointer;background:none;}
@@ -386,6 +400,11 @@
       <div class="swatches" id="swatchRow"></div>
     </div>
 
+    <div class="panel" id="colorWarningsPanel" style="display:none;border-color:#e8a33d;margin-bottom:16px;">
+      <h3 style="color:#e8a33d;">⚠️ Readability</h3>
+      <div id="colorWarningsList"></div>
+    </div>
+
     <div class="panel-row">
       <div class="panel" id="logoPanel">
         <h3>Logo Preview</h3>
@@ -479,8 +498,20 @@
           <option value="pastel">Pastel</option>
           <option value="vibrant">Vibrant / Neon</option>
           <option value="shades">Shades (light to dark)</option>
+          <option value="warm">Warm</option>
+          <option value="cool">Cool</option>
+          <option value="grayscale">Grayscale / Neutral</option>
+          <option value="earth">Earth Tones</option>
+          <option value="jewel">Jewel Tones</option>
+          <option value="sunset">Sunset</option>
+          <option value="ocean">Ocean</option>
+          <option value="duotone">Duotone</option>
+          <option value="metallic">Metallic</option>
           <option value="random">Random</option>
         </select>
+        <span class="palette-count-wrap" title="Number of colors to generate">
+          <input type="number" id="paletteCount" min="3" max="24" value="5" style="width:52px;">
+        </span>
         <button id="generatePaletteBtn">Generate palette</button>
         <button class="mini" id="randomSeedBtn">🎲 Random seed</button>
       </div>
@@ -572,6 +603,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const toast = document.getElementById('toast');
   const paletteSeedInput = document.getElementById('paletteSeed');
   const paletteSchemeSelect = document.getElementById('paletteScheme');
+  const paletteCountInput = document.getElementById('paletteCount');
   const generatePaletteBtn = document.getElementById('generatePaletteBtn');
   const randomSeedBtn = document.getElementById('randomSeedBtn');
   const extractInfo = document.getElementById('extractInfo');
@@ -1078,6 +1110,265 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       });
     }
   }
+
+  // ---------- color readability checks ----------
+  // Real WCAG 2.x formulas, verified against known reference values
+  // before use (#767676 on white = 4.54:1, the commonly-cited AA
+  // boundary gray; pure blue on white = 8.59:1; both matched exactly).
+  function relativeLuminance(hexVal){
+    const {r,g,b} = hexToRgb(hexVal);
+    const [rs,gs,bs] = [r,g,b].map(v => {
+      const c = v/255;
+      return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+    });
+    return 0.2126*rs + 0.7152*gs + 0.0722*bs;
+  }
+  function contrastRatio(hex1, hex2){
+    const l1 = relativeLuminance(hex1), l2 = relativeLuminance(hex2);
+    const lighter = Math.max(l1,l2), darker = Math.min(l1,l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+  // "redmean" perceptual color distance -- a well-known low-cost
+  // improvement over plain Euclidean RGB distance that weights channels
+  // based on average red level (compuphase.com color metric). Range is
+  // roughly 0 (identical) to ~765 (black vs white).
+  function colorDistance(hex1, hex2){
+    const c1 = hexToRgb(hex1), c2 = hexToRgb(hex2);
+    const rmean = (c1.r + c2.r) / 2;
+    const dr = c1.r - c2.r, dg = c1.g - c2.g, db = c1.b - c2.b;
+    const weightR = 2 + rmean/256, weightG = 4, weightB = 2 + (255-rmean)/256;
+    return Math.sqrt(weightR*dr*dr + weightG*dg*dg + weightB*db*db);
+  }
+  // Composites a possibly-transparent color over an opaque backdrop --
+  // this is what actually determines how a color LOOKS, so it's what
+  // contrast/distance checks need to use rather than the raw hex. A
+  // verified real case: white text at 20% alpha over a dark background
+  // measures 18.5:1 by raw hex (looks perfect) but only 1.85:1 once you
+  // account for it being 80% see-through (genuinely hard to read) --
+  // ignoring alpha would miss that entirely.
+  function compositeOver(topHex, backdropRgb){
+    const bare = bareHex(topHex);
+    const hasAlpha = bare.length === 8;
+    const alpha = hasAlpha ? parseInt(bare.slice(6,8),16)/255 : 1;
+    const rgb = hexToRgb(bare.slice(0,6));
+    return {
+      r: alpha*rgb.r + (1-alpha)*backdropRgb.r,
+      g: alpha*rgb.g + (1-alpha)*backdropRgb.g,
+      b: alpha*rgb.b + (1-alpha)*backdropRgb.b,
+    };
+  }
+  // The "canvas" everything ultimately sits on -- the theme's own root
+  // background color if it has one (itself composited over a neutral
+  // gray, in case IT also has alpha), else a neutral gray fallback.
+  function getCanvasBackdrop(){
+    const neutral = {r:128,g:128,b:128};
+    const rootBg = get(['background','color']);
+    return (typeof rootBg === 'string' && isHexColor(rootBg)) ? compositeOver(rootBg, neutral) : neutral;
+  }
+
+  const CONTRAST_THRESHOLD = 3.0; // WCAG's UI-component/non-text bar, not the stricter 4.5 for body text
+  const DUPLICATE_DISTANCE_THRESHOLD = 30; // redmean distance below this reads as "practically the same color"
+
+  // Specific field pairs where low contrast has a real, named consequence
+  // (field 'a' is visually drawn on top of field 'b') -- checked with
+  // real field labels so the warning tells you exactly what to fix.
+  const CONTRAST_PAIRS = [
+    { a:['color'], b:['background','color'], label:'Text vs. Background' },
+    { a:['selection','color'], b:['selection','background','color'], label:'Selection text vs. Selection background' },
+    { a:['menu','selection','color'], b:['menu','selection','background','color'], label:'Menu selection text vs. Menu selection background' },
+    { a:['color'], b:['menu','background','color'], label:'Text vs. Menu background' },
+    { a:['progressBar','color'], b:['progressBar','background','color'], label:'Progress bar fill vs. track' },
+    { a:['scrollBar','color'], b:['scrollBar','background','color'], label:'Scrollbar vs. track' },
+  ];
+
+  // Suggests a new value for the foreground field that reaches the
+  // target contrast against the backdrop it's actually composited over.
+  // Two-stage, verified against a real edge case: at very low alpha, NO
+  // lightness choice can reach the threshold (the backdrop dominates the
+  // composited result regardless of hue) -- stage 2 catches this and
+  // raises alpha just enough instead of returning a suggestion that
+  // still silently fails.
+  function suggestBetterColor(fgHex, backdropFlatRgb, threshold){
+    const bare = bareHex(fgHex);
+    const hadHash = fgHex.trim().startsWith('#');
+    const hasAlpha = bare.length === 8;
+    const origAlpha = hasAlpha ? parseInt(bare.slice(6,8),16)/255 : 1;
+    const rgb = hexToRgb(bare.slice(0,6));
+    const {h,s,l} = rgbToHsl(rgb.r,rgb.g,rgb.b);
+
+    function contrastAt(testL, alpha){
+      // hslToHex returns a full hex string; strip to rgb via hexToRgb for compositing math
+      const t = hexToRgb(bareHex(hslToHex(h,s,testL)));
+      const composited = {
+        r: alpha*t.r + (1-alpha)*backdropFlatRgb.r,
+        g: alpha*t.g + (1-alpha)*backdropFlatRgb.g,
+        b: alpha*t.b + (1-alpha)*backdropFlatRgb.b,
+      };
+      return contrastRatio(rgbToHex(composited.r,composited.g,composited.b), rgbToHex(backdropFlatRgb.r,backdropFlatRgb.g,backdropFlatRgb.b));
+    }
+    function buildHex(finalL, finalAlpha){
+      const hex6 = bareHex(hslToHex(h,s,finalL));
+      const alphaByte = hasAlpha ? Math.round(finalAlpha*255).toString(16).padStart(2,'0') : '';
+      return (hadHash?'#':'') + hex6 + alphaByte;
+    }
+
+    let bestDown=null, bestUp=null;
+    for(let step=1; step<=60; step++){
+      const dl = step/60;
+      if(bestDown===null){ const lD=Math.max(0,l-dl); if(contrastAt(lD,origAlpha)>=threshold) bestDown={L:lD,delta:dl}; }
+      if(bestUp===null){ const lU=Math.min(1,l+dl); if(contrastAt(lU,origAlpha)>=threshold) bestUp={L:lU,delta:dl}; }
+      if(bestDown && bestUp) break;
+    }
+    if(bestDown || bestUp){
+      const chosen = (bestDown && bestUp) ? (bestDown.delta<=bestUp.delta?bestDown.L:bestUp.L) : (bestDown?bestDown.L:bestUp.L);
+      return { hex: buildHex(chosen, origAlpha), alphaRaised: false };
+    }
+
+    if(!hasAlpha){
+      const bestL = contrastAt(0,1) > contrastAt(1,1) ? 0 : 1;
+      return { hex: buildHex(bestL, 1), alphaRaised: false };
+    }
+    const extremeL = contrastAt(0,1) > contrastAt(1,1) ? 0 : 1;
+    let neededAlpha = null;
+    for(let step=1; step<=100; step++){
+      const testAlpha = origAlpha + (1-origAlpha)*(step/100);
+      if(contrastAt(extremeL, testAlpha) >= threshold){ neededAlpha = testAlpha; break; }
+    }
+    return { hex: buildHex(extremeL, neededAlpha !== null ? neededAlpha : 1), alphaRaised: true };
+  }
+
+  // Suggests a new value for colorB that's meaningfully distinct from
+  // colorA once both are composited/rendered -- nudges B's lightness
+  // away from A, preserving B's hue, saturation, and alpha.
+  function suggestDistinctColor(hexB, hexA, backdropRgb, distanceThreshold){
+    const bareB = bareHex(hexB);
+    const hadHash = hexB.trim().startsWith('#');
+    const hasAlpha = bareB.length === 8;
+    const alphaSuffix = hasAlpha ? bareB.slice(6,8) : '';
+    const rgbB = hexToRgb(bareB.slice(0,6));
+    const {h,s,l} = rgbToHsl(rgbB.r,rgbB.g,rgbB.b);
+    const aFlat = compositeOver(hexA, backdropRgb);
+
+    function distanceAt(testL){
+      const hex6 = bareHex(hslToHex(h,s,testL));
+      const bFlat = compositeOver('#'+hex6+alphaSuffix, backdropRgb);
+      const dr=aFlat.r-bFlat.r, dg=aFlat.g-bFlat.g, db=aFlat.b-bFlat.b;
+      const rmean=(aFlat.r+bFlat.r)/2;
+      return Math.sqrt((2+rmean/256)*dr*dr + 4*dg*dg + (2+(255-rmean)/256)*db*db);
+    }
+    let bestDown=null, bestUp=null;
+    for(let step=1; step<=60; step++){
+      const dl = step/60;
+      if(bestDown===null){ const lD=Math.max(0,l-dl); if(distanceAt(lD)>=distanceThreshold) bestDown={L:lD,delta:dl}; }
+      if(bestUp===null){ const lU=Math.min(1,l+dl); if(distanceAt(lU)>=distanceThreshold) bestUp={L:lU,delta:dl}; }
+      if(bestDown && bestUp) break;
+    }
+    const chosen = (bestDown && bestUp) ? (bestDown.delta<=bestUp.delta?bestDown.L:bestUp.L) : (bestDown?bestDown.L:(bestUp?bestUp.L:(l<0.5?1:0)));
+    const hex6 = bareHex(hslToHex(h,s,chosen));
+    return (hadHash?'#':'') + hex6 + alphaSuffix;
+  }
+
+  function computeColorWarnings(){
+    const warnings = [];
+    const backdrop = getCanvasBackdrop();
+
+    CONTRAST_PAIRS.forEach(pair => {
+      const va = get(pair.a), vb = get(pair.b);
+      if(typeof va !== 'string' || typeof vb !== 'string') return;
+      if(!isHexColor(va) || !isHexColor(vb)) return;
+      const bFlat = compositeOver(vb, backdrop);
+      const aFlat = compositeOver(va, bFlat); // a renders on top of b
+      const ratio = contrastRatio(rgbToHex(aFlat.r,aFlat.g,aFlat.b), rgbToHex(bFlat.r,bFlat.g,bFlat.b));
+      if(ratio < CONTRAST_THRESHOLD){
+        const suggestion = suggestBetterColor(va, bFlat, CONTRAST_THRESHOLD);
+        warnings.push({
+          type: 'contrast', path: pair.a, label: pair.label,
+          detail: ratio.toFixed(2)+':1, needs '+CONTRAST_THRESHOLD.toFixed(1)+':1',
+          colorA: toCssColor(va), colorB: toCssColor(vb),
+          suggestion: suggestion.hex,
+          suggestionNote: suggestion.alphaRaised ? ' (also raised opacity — too transparent to fix by color alone)' : '',
+        });
+      }
+    });
+
+    const allColors = [];
+    collectColors(data, allColors);
+    const seenPairs = new Set();
+    for(let i=0;i<allColors.length;i++){
+      for(let j=i+1;j<allColors.length;j++){
+        const pathA = allColors[i].path.join('.'), pathB = allColors[j].path.join('.');
+        if(pathA === pathB) continue;
+        const bareA = bareHex(allColors[i].value).toLowerCase(), bareBv = bareHex(allColors[j].value).toLowerCase();
+        if(bareA === bareBv) continue; // identical on purpose (shared accent) isn't a warning
+        const dupKey = [pathA,pathB].sort().join('|');
+        if(seenPairs.has(dupKey)) continue;
+        seenPairs.add(dupKey);
+        const flatA = compositeOver(allColors[i].value, backdrop), flatB = compositeOver(allColors[j].value, backdrop);
+        const dist = colorDistance(rgbToHex(flatA.r,flatA.g,flatA.b), rgbToHex(flatB.r,flatB.g,flatB.b));
+        if(dist < DUPLICATE_DISTANCE_THRESHOLD){
+          const suggestion = suggestDistinctColor(allColors[j].value, allColors[i].value, backdrop, DUPLICATE_DISTANCE_THRESHOLD);
+          warnings.push({
+            type: 'duplicate', path: allColors[j].path, label: pathA+' vs. '+pathB,
+            detail: 'distance '+dist.toFixed(0)+', too similar to tell apart',
+            colorA: toCssColor(allColors[i].value), colorB: toCssColor(allColors[j].value),
+            suggestion, suggestionNote: '',
+          });
+        }
+      }
+    }
+    return warnings;
+  }
+
+  function applyColorSuggestion(path, newHex){
+    setByPath(data, path, newHex);
+    renderAll();
+    showToast('Applied suggested color');
+  }
+
+  function renderColorWarnings(){
+    const panel = document.getElementById('colorWarningsPanel');
+    const list = document.getElementById('colorWarningsList');
+    if(!panel || !list) return;
+    const warnings = computeColorWarnings();
+    if(warnings.length === 0){
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = 'block';
+    list.innerHTML = '';
+    warnings.forEach(w=>{
+      const row = document.createElement('div');
+      row.className = 'cw-row';
+      row.title = w.detail + w.suggestionNote;
+
+      const swatches = document.createElement('div');
+      swatches.className = 'cw-swatches';
+      swatches.innerHTML =
+        '<span class="cw-dot" style="background:'+w.colorA+'"></span>' +
+        '<span class="cw-dot" style="background:'+w.colorB+'"></span>';
+
+      const label = document.createElement('div');
+      label.className = 'cw-label';
+      label.textContent = w.label;
+
+      const ratioTag = document.createElement('span');
+      ratioTag.className = 'cw-ratio';
+      ratioTag.textContent = w.type === 'contrast' ? w.detail.split(',')[0] : 'similar';
+
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'cw-apply';
+      applyBtn.innerHTML = '<span class="cw-preview-dot" style="background:'+toCssColor(w.suggestion)+'"></span>Fix';
+      applyBtn.title = 'Apply suggested color: ' + w.suggestion + w.suggestionNote;
+      applyBtn.onclick = ()=> applyColorSuggestion(w.path, w.suggestion);
+
+      row.appendChild(swatches);
+      row.appendChild(label);
+      row.appendChild(ratioTag);
+      row.appendChild(applyBtn);
+      list.appendChild(row);
+    });
+  }
+
   function flattenLeaves(obj, path, out){
     if(Array.isArray(obj)){
       obj.forEach((v,i)=>flattenLeaves(v, path.concat(i), out));
@@ -1136,6 +1427,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     if(colors.length===0){
       swatchRow.innerHTML = '<span style="color:var(--text-2);font-size:12px;">No hex color fields detected in this file.</span>';
     }
+    renderColorWarnings();
   }
 
   // Resolves a theme.json asset reference (logo/background/audio path) to
@@ -1659,56 +1951,136 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function randomHex(){
     return rgbToHex(Math.random()*255, Math.random()*255, Math.random()*255);
   }
-  function generatePalette(seedHex, scheme){
+  // Interpolates between two hues along whichever direction is SHORTER
+  // around the color wheel -- naive subtraction sweeps the wrong way
+  // whenever a gradient crosses the 0/360 boundary, dragging in
+  // unrelated hues (verified: a pink->orange sunset was accidentally
+  // passing through green before this was fixed).
+  function lerpHue(h1, h2, t){
+    const diff = ((h2 - h1 + 540) % 360) - 180;
+    return (h1 + diff * t + 360) % 360;
+  }
+  // Evenly spreads n values across a span, centered on 0 (i.e. -span/2 to +span/2).
+  function spread(n, span){
+    if(n === 1) return [0];
+    const out = [];
+    for(let i=0;i<n;i++) out.push(-span/2 + (span * i/(n-1)));
+    return out;
+  }
+  function generatePalette(seedHex, scheme, count){
+    const n = Math.max(3, Math.min(24, count || 5));
     const {r,g,b} = hexToRgb(seedHex);
     const {h,s,l} = rgbToHsl(r,g,b);
     const clamp=(v,mn,mx)=>Math.min(mx,Math.max(mn,v));
     switch(scheme){
       case 'monochromatic':
-        return [0.18,0.34,0.5,0.66,0.82].map(ll => hslToHex(h, clamp(s,0.15,0.9), ll));
-      case 'complementary':
-        return [
-          hslToHex(h, s, clamp(l*0.7,0.15,0.85)),
-          hslToHex(h, s, clamp(l,0.15,0.85)),
-          hslToHex(h, s, clamp(l*1.25,0.15,0.9)),
-          hslToHex(h+180, s, clamp(l*0.85,0.15,0.85)),
-          hslToHex(h+180, s, clamp(l*1.15,0.15,0.9)),
-        ];
-      case 'triadic':
-        return [
-          hslToHex(h, s, clamp(l,0.2,0.8)),
-          hslToHex(h, s, clamp(l*1.3,0.2,0.85)),
-          hslToHex(h+120, s, clamp(l,0.2,0.8)),
-          hslToHex(h+240, s, clamp(l,0.2,0.8)),
-          hslToHex(h+120, s, clamp(l*0.7,0.15,0.75)),
-        ];
-      case 'split-complementary':
-        return [
-          hslToHex(h, s, clamp(l,0.2,0.8)),
-          hslToHex(h, s, clamp(l*1.25,0.2,0.85)),
-          hslToHex(h+150, s, clamp(l,0.2,0.8)),
-          hslToHex(h+210, s, clamp(l,0.2,0.8)),
-          hslToHex(h+150, s, clamp(l*0.75,0.15,0.75)),
-        ];
-      case 'tetradic':
-        return [
-          hslToHex(h, s, clamp(l,0.25,0.75)),
-          hslToHex(h+90, s, clamp(l,0.25,0.75)),
-          hslToHex(h+180, s, clamp(l,0.25,0.75)),
-          hslToHex(h+270, s, clamp(l,0.25,0.75)),
-          hslToHex(h, s, clamp(l*1.35,0.25,0.85)),
-        ];
+        return spread(n,0).map((_,i) => hslToHex(h, clamp(s,0.15,0.9), clamp(0.15 + (0.7*i/((n-1)||1)),0.1,0.9)));
+      case 'complementary': {
+        const half = Math.ceil(n/2);
+        const out = [];
+        spread(half,0).forEach((_,i) => out.push(hslToHex(h, s, clamp(l*(0.75+0.5*i/((half-1)||1)),0.15,0.9))));
+        spread(n-half,0).forEach((_,i) => out.push(hslToHex(h+180, s, clamp(l*(0.8+0.4*i/(((n-half-1))||1)),0.15,0.9))));
+        return out.slice(0,n);
+      }
+      case 'triadic': {
+        const out = [];
+        const perGroup = Math.ceil(n/3);
+        [0,120,240].forEach(hueOff => {
+          for(let i=0;i<perGroup && out.length<n;i++) out.push(hslToHex(h+hueOff, s, clamp(l*(0.75+0.4*i/((perGroup-1)||1)),0.2,0.85)));
+        });
+        return out.slice(0,n);
+      }
+      case 'split-complementary': {
+        const out = [];
+        const perGroup = Math.ceil(n/3);
+        [0,150,210].forEach(hueOff => {
+          for(let i=0;i<perGroup && out.length<n;i++) out.push(hslToHex(h+hueOff, s, clamp(l*(0.7+0.5*i/((perGroup-1)||1)),0.15,0.85)));
+        });
+        return out.slice(0,n);
+      }
+      case 'tetradic': {
+        const out = [];
+        const perGroup = Math.ceil(n/4);
+        [0,90,180,270].forEach(hueOff => {
+          for(let i=0;i<perGroup && out.length<n;i++) out.push(hslToHex(h+hueOff, s, clamp(l*(0.8+0.35*i/((perGroup-1)||1)),0.25,0.85)));
+        });
+        return out.slice(0,n);
+      }
       case 'pastel':
-        return [-30,-15,0,15,30].map(off => hslToHex(h+off, clamp(s,0.2,0.4), clamp(0.8,0.72,0.88)));
+        return spread(n,100).map(off => hslToHex(h+off, clamp(s,0.2,0.4), 0.8));
       case 'vibrant':
-        return [-60,-30,0,30,60].map(off => hslToHex(h+off, clamp(Math.max(s,0.85),0.85,1), clamp(0.55,0.45,0.6)));
+        return spread(n,140).map(off => hslToHex(h+off, clamp(Math.max(s,0.85),0.85,1), 0.55));
       case 'shades':
-        return [0.85,0.66,0.48,0.3,0.14].map(ll => hslToHex(h, clamp(s,0.25,0.9), ll));
+        return spread(n,0).map((_,i) => hslToHex(h, clamp(s,0.25,0.9), 0.86 - (0.72*i/((n-1)||1))));
+      case 'warm':
+        return spread(n,60).map((off,i) => hslToHex(20 + off + (i-n/2)*4, clamp(0.55+s*0.2,0.5,0.9), clamp(0.35+0.35*i/((n-1)||1),0.3,0.75)));
+      case 'cool':
+        return spread(n,70).map(off => hslToHex(200 + off, clamp(0.45+s*0.2,0.4,0.85), clamp(0.35+0.35*((off+35)/70),0.3,0.75)));
+      case 'grayscale':
+        return spread(n,0).map((_,i) => hslToHex(h, 0.03, 0.12 + (0.78*i/((n-1)||1))));
+      case 'earth':
+        return spread(n,40).map((off,i) => hslToHex(28 + off, clamp(0.3+s*0.15,0.25,0.5), clamp(0.3+0.4*i/((n-1)||1),0.25,0.7)));
+      case 'jewel': {
+        // Curated jewel-tone anchors (emerald, sapphire, ruby, amethyst,
+        // topaz) rather than a wide continuous spread -- a wide spread
+        // just reads as "dark vibrant," not specifically "jewel."
+        const anchors = [140, 220, 350, 280, 45];
+        return spread(n,0).map((_,i) => {
+          const t = i/((n-1)||1);
+          const idx = Math.round(t * (anchors.length-1));
+          const blendedHue = lerpHue(anchors[idx], h, 0.12);
+          return hslToHex(blendedHue, clamp(Math.max(s,0.65),0.6,0.85), 0.3 + (i%2)*0.06);
+        });
+      }
+      case 'sunset': {
+        const stops = [330, 10, 30, 45, 50];
+        return spread(n,0).map((_,i) => {
+          const t = i/((n-1)||1);
+          const pos = t * (stops.length-1);
+          const lo = Math.floor(pos), hi = Math.min(stops.length-1, lo+1);
+          const hh = lerpHue(stops[lo], stops[hi], pos-lo);
+          return hslToHex(hh, 0.75, clamp(0.45+0.15*t,0.4,0.65));
+        });
+      }
+      case 'ocean': {
+        const stops = [230, 205, 190, 175, 165];
+        return spread(n,0).map((_,i) => {
+          const t = i/((n-1)||1);
+          const pos = t * (stops.length-1);
+          const lo = Math.floor(pos), hi = Math.min(stops.length-1, lo+1);
+          const hh = lerpHue(stops[lo], stops[hi], pos-lo);
+          return hslToHex(hh, 0.6, clamp(0.15+0.45*t,0.15,0.6));
+        });
+      }
+      case 'duotone': {
+        const out = [];
+        const half = Math.ceil(n/2);
+        spread(half,0).forEach((_,i) => out.push(hslToHex(h, clamp(s,0.4,0.8), 0.25+0.5*i/((half-1)||1))));
+        spread(n-half,0).forEach((_,i) => out.push(hslToHex(h+180, clamp(s,0.4,0.8), 0.25+0.5*i/(((n-half-1))||1))));
+        return out.slice(0,n);
+      }
+      case 'metallic': {
+        // Gold, bronze, copper, silver, rose-gold, pale-gold anchors, low
+        // saturation (real metals aren't vivid), lightness curved like a
+        // sheen. Only lightly blended toward the seed hue (12%) so it
+        // stays recognizably metallic regardless of seed color.
+        const anchors = [45, 30, 20, 0, 350, 42];
+        return spread(n,0).map((_,i) => {
+          const t = i/((n-1)||1);
+          const anchorIdx = Math.floor(t * (anchors.length-1));
+          const anchorHue = anchors[anchorIdx];
+          const isNeutral = anchorHue === 0;
+          const blendedHue = isNeutral ? anchorHue : lerpHue(anchorHue, h, 0.12);
+          const sat = isNeutral ? 0.05 : clamp(0.28 + s*0.08, 0.2, 0.4);
+          const light = clamp(0.38 + 0.34*Math.sin(t*Math.PI), 0.35, 0.78);
+          return hslToHex(blendedHue, sat, light);
+        });
+      }
       case 'random':
-        return Array.from({length:5}, ()=> hslToHex(Math.random()*360, 0.4+Math.random()*0.4, 0.25+Math.random()*0.5));
+        return Array.from({length:n}, ()=> hslToHex(Math.random()*360, 0.4+Math.random()*0.4, 0.25+Math.random()*0.5));
       case 'analogous':
       default:
-        return [-40,-20,0,20,40].map(off => hslToHex(h+off, clamp(s,0.35,0.85), clamp(l,0.3,0.7)));
+        return spread(n,80).map(off => hslToHex(h+off, clamp(s,0.35,0.85), clamp(l,0.3,0.7)));
     }
   }
   function renderPaletteSwatches(){
@@ -1791,16 +2163,32 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       paletteMapEl.appendChild(row);
     });
   }
+  // Counts distinct color VALUES in the theme (normalized so bare vs #
+  // and different casing don't count as different colors) -- reused
+  // fields sharing the same value (e.g. selection.color and
+  // menu.selection.color both set to the same accent) shouldn't inflate
+  // the count.
+  function countDistinctColors(){
+    const colors = [];
+    collectColors(data, colors);
+    const seen = new Set();
+    colors.forEach(c => seen.add(bareHex(c.value).toLowerCase()));
+    return seen.size;
+  }
   function autoSeedPalette(){
     const colors = [];
     collectColors(data, colors);
     const seed = colors.length ? toCssColor(colors[0].value).slice(0,7) : '#4fd1c5';
     paletteSeedInput.value = seed;
-    currentPalette = generatePalette(seed, paletteSchemeSelect.value || 'analogous');
+    const distinct = countDistinctColors();
+    if(distinct > 0) paletteCountInput.value = Math.max(3, Math.min(24, distinct));
+    currentPalette = generatePalette(seed, paletteSchemeSelect.value || 'analogous', parseInt(paletteCountInput.value,10));
     renderPaletteSwatches();
   }
   generatePaletteBtn.addEventListener('click', ()=>{
-    currentPalette = generatePalette(paletteSeedInput.value, paletteSchemeSelect.value);
+    const n = Math.max(3, Math.min(24, parseInt(paletteCountInput.value,10) || 5));
+    paletteCountInput.value = n;
+    currentPalette = generatePalette(paletteSeedInput.value, paletteSchemeSelect.value, n);
     renderPaletteSwatches();
     renderPaletteMap();
   });
@@ -1843,10 +2231,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   function loadImageEl(url, isLocal){
     return new Promise((resolve, reject)=>{
       const img = new Image();
-      if(!isLocal) img.crossOrigin = 'anonymous';
+      let loadUrl = url;
+      if(!isLocal){
+        img.crossOrigin = 'anonymous';
+        // The live preview renders this same URL as a plain CSS
+        // background-image, which never sets crossOrigin -- if the
+        // browser cached THAT response, a later crossOrigin='anonymous'
+        // request for the identical URL can get served the same cached,
+        // non-CORS-tagged response instead of making a fresh request.
+        // The canvas then treats it as tainted and getImageData() throws
+        // a SecurityError, even on a server that would happily approve a
+        // real CORS request. Forcing a fresh, uncached request for this
+        // specific load sidesteps that entirely.
+        const sep = url.includes('?') ? '&' : '?';
+        loadUrl = url + sep + '_extractcb=' + Date.now();
+      }
       img.onload = ()=> resolve(img);
       img.onerror = ()=> reject(new Error('load-failed'));
-      img.src = url;
+      img.src = loadUrl;
     });
   }
   // Simple k-means clustering in RGB space to find dominant colors.
@@ -1891,7 +2293,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       .filter(c=>c.count > 0)
       .sort((a,b)=> b.count - a.count);
   }
-  async function extractColorsFromUrl(url, isLocal){
+  async function extractColorsFromUrl(url, isLocal, k){
+    const targetK = Math.max(3, Math.min(24, k || 5));
     const img = await loadImageEl(url, isLocal);
     const size = 100;
     const canvas = document.createElement('canvas');
@@ -1911,8 +2314,8 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       pixels.push([d[i], d[i+1], d[i+2]]);
     }
     if(pixels.length === 0) throw new Error('empty');
-    const clusters = kMeansColors(pixels, 5, 6);
-    return clusters.slice(0,5).map(c => rgbToHex(c.rgb[0], c.rgb[1], c.rgb[2]));
+    const clusters = kMeansColors(pixels, targetK, 8);
+    return clusters.slice(0,targetK).map(c => rgbToHex(c.rgb[0], c.rgb[1], c.rgb[2]));
   }
   function renderExtractedSwatches(hexColors){
     extractedSwatchesEl.innerHTML = '';
@@ -1933,13 +2336,48 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       extractBtn.disabled = true;
     }else{
       const resolved = resolveAssetSrc(url);
-      const bundledNote = (resolved && resolved.startsWith('blob:'))
-        ? ' <span style="color:var(--joy-blue);">(bundled with this theme \u2014 ready to extract)</span>'
-        : '';
-      extractInfo.innerHTML = 'Background image: <code>' + escapeHtml(url) + '</code>' + bundledNote;
+      const isBundled = resolved && resolved.startsWith('blob:');
+      let note = '';
+      if(isBundled){
+        note = ' <span style="color:var(--joy-blue);">(bundled with this theme \u2014 ready to extract)</span>';
+      }else if(/^https?:\/\//i.test(url)){
+        // A dynamic/scripted endpoint (.php and similar) is much less
+        // likely to have CORS enabled than a plain static image file --
+        // developers serving images for normal <img> display rarely think
+        // to add it, since it only matters for this unusual pixel-reading
+        // use case. Flag that difference upfront rather than letting
+        // people find out only after a failed attempt.
+        const isStaticImage = /\.(png|jpe?g|gif|webp|bmp|avif)(\?.*)?$/i.test(url);
+        if(isStaticImage){
+          note = ' <span style="color:var(--text-2);">(remote image \u2014 extraction works if the host allows it, otherwise you\'ll get a save-and-browse-local option)</span>';
+        }else{
+          note = ' <span style="color:#e8a33d;">(dynamic image endpoint \u2014 these rarely allow direct pixel reading; "Browse local image" will likely be needed)</span>';
+        }
+      }
+      extractInfo.innerHTML = 'Background image: <code>' + escapeHtml(url) + '</code>' + note;
       extractBtn.disabled = false;
     }
   }
+  // A public image-proxy CDN (weserv.nl / images.weserv.nl) that's been
+  // around for years specifically to solve this exact problem: it
+  // re-serves any image URL with proper CORS headers attached, so a
+  // canvas can read its pixels even when the original host never
+  // configured CORS itself. This routes the background image URL through
+  // a third party -- disclosed clearly in the UI, and only used when you
+  // click the button, never automatically.
+  function buildImageProxyUrl(originalUrl){
+    const stripped = originalUrl.replace(/^https?:\/\//i, '');
+    return 'https://images.weserv.nl/?url=' + encodeURIComponent(stripped);
+  }
+
+  async function runExtraction(fetchUrl, isLocal, statusPrefix){
+    const targetK = Math.max(3, Math.min(24, countDistinctColors() || parseInt(paletteCountInput.value,10) || 5));
+    const hexColors = await extractColorsFromUrl(fetchUrl, isLocal, targetK);
+    extractedPalette = hexColors;
+    renderExtractedSwatches(hexColors);
+    showToast((statusPrefix || 'Extracted ') + hexColors.length + ' colors from the background image');
+  }
+
   extractBtn.addEventListener('click', async ()=>{
     const url = getBackgroundImageUrl();
     if(!url) return;
@@ -1954,18 +2392,63 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     const isBundled = !!(resolved && resolved.startsWith('blob:'));
     const fetchUrl = resolved || url;
     try{
-      const hexColors = await extractColorsFromUrl(fetchUrl, isBundled);
-      extractedPalette = hexColors;
-      renderExtractedSwatches(hexColors);
-      showToast('Extracted ' + hexColors.length + ' colors from the background image');
+      await runExtraction(fetchUrl, isBundled);
     }catch(err){
+      console.error('Palette extraction failed:', err);
       const isDeviceScheme = !isBundled && !/^https?:\/\//i.test(url);
-      extractInfo.innerHTML = 'Could not read colors from <code>' + escapeHtml(url) + '</code>' +
-        (isDeviceScheme
-          ? ' \u2014 this looks like a device path a browser can not fetch.'
-          : ' \u2014 likely blocked by cross-origin restrictions.') +
-        ' Try "Browse local image" instead.';
-      showToast('Could not read that image \u2014 try browsing a local file');
+      // Both 'cors' (canvas taint on getImageData) AND 'load-failed' (the
+      // image never loaded at all) can legitimately be cross-origin
+      // issues for a non-local URL -- some servers reject the
+      // crossOrigin='anonymous' request outright rather than letting it
+      // load and only failing at the pixel-read step. Anything else is a
+      // genuinely different failure and shouldn't be mislabeled as CORS.
+      const isLikelyCors = !isDeviceScheme && err && (err.message === 'cors' || err.message === 'load-failed');
+      if(isDeviceScheme){
+        extractInfo.innerHTML = 'Could not read colors from <code>' + escapeHtml(url) + '</code>' +
+          ' \u2014 this looks like a device path a browser can not fetch. Try "Browse local image" instead.';
+      }else if(isLikelyCors){
+        extractInfo.innerHTML =
+          '<div style="margin-bottom:8px;">This host doesn\'t allow browsers to read its image pixels directly (a real cross-origin restriction, not a bug here).</div>' +
+          '<div style="margin-bottom:8px;">Try the button below to fetch it through a public image proxy that adds the missing permission automatically \u2014 or use the manual save-and-browse steps if you\'d rather everything stay fully local.</div>';
+        const proxyBtn = document.createElement('button');
+        proxyBtn.className = 'mini';
+        proxyBtn.style.marginRight = '8px';
+        proxyBtn.textContent = '\u2601\ufe0f Try via image proxy';
+        proxyBtn.onclick = async ()=>{
+          proxyBtn.disabled = true;
+          proxyBtn.textContent = 'Trying\u2026';
+          try{
+            const proxyUrl = buildImageProxyUrl(url);
+            await runExtraction(proxyUrl, false, 'Extracted (via image proxy) ');
+            extractInfo.innerHTML = 'Background image: <code>' + escapeHtml(url) + '</code> <span style="color:var(--joy-blue);">(read via images.weserv.nl proxy)</span>';
+          }catch(proxyErr){
+            console.error('Proxy extraction also failed:', proxyErr);
+            proxyBtn.disabled = false;
+            proxyBtn.textContent = '\u2601\ufe0f Try via image proxy';
+            showToast('The proxy could not read this image either \u2014 try the manual save-and-browse steps below');
+          }
+        };
+        const manualDetails = document.createElement('details');
+        manualDetails.style.marginTop = '8px';
+        manualDetails.innerHTML =
+          '<summary style="cursor:pointer;color:var(--text-2);font-size:11.5px;">Or do it manually, fully local</summary>' +
+          '<ol style="margin:8px 0 0 18px;padding:0;line-height:1.6;font-size:11.5px;color:var(--text-2);">' +
+            '<li><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" style="color:var(--joy-blue);">Open the image in a new tab \u2197</a></li>' +
+            '<li>Right-click it \u2192 "Save image as\u2026"</li>' +
+            '<li>Use "Browse local image" below and pick the saved file</li>' +
+          '</ol>';
+        extractInfo.appendChild(proxyBtn);
+        extractInfo.appendChild(manualDetails);
+      }else{
+        // NOT a CORS taint error -- something else actually broke. Show
+        // the real error instead of guessing, so this is diagnosable
+        // instead of silently mislabeled as a cross-origin issue.
+        extractInfo.innerHTML =
+          '<div style="color:#ff3c50;">Extraction failed with an unexpected error: <code>' +
+          escapeHtml((err && err.message) || String(err)) +
+          '</code></div><div style="margin-top:4px;color:var(--text-2);">This isn\'t the usual cross-origin issue \u2014 check the browser console (F12) for the full details.</div>';
+      }
+      showToast('Could not extract a palette \u2014 see the message below');
     }finally{
       extractBtn.disabled = false;
       extractBtn.textContent = originalLabel;
