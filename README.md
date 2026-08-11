@@ -1,15 +1,16 @@
 <div align="center">
 
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:ff3c50,50:9d4edd,100:00c2ff&height=200&section=header&text=THEME%20EDITOR&fontSize=62&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=visual%20editor%20for%20Tinfoil%20themes&descAlignY=58&descSize=18" width="100%"/>
+
 <img src="assets/banner.png" alt="Aramaki's Tinfoil Theme Editor" width="100%">
 
-### A visual, in-browser editor for Tinfoil `theme.json` files
-No installs. No command line. Just open it and drag in a theme.
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=620&lines=No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Pull+a+palette+straight+from+your+wallpaper.;Export+a+ready-to-use+.zip+in+one+click.)](https://git.io/typing-svg)
 
-[![Made for Tinfoil](https://img.shields.io/badge/made%20for-Tinfoil-1e2327?style=flat-square)](https://github.com/Huntereb/Tinfoil)
-[![Runs in Browser](https://img.shields.io/badge/runs%20in-browser-00c2ff?style=flat-square)](#-quick-start)
-[![Windows App Available](https://img.shields.io/badge/windows-desktop%20app-ff3c50?style=flat-square)](#-desktop-app)
-[![Mobile Friendly](https://img.shields.io/badge/android%20%26%20ios-friendly-5be27a?style=flat-square)](#-mobile-android--ios)
-[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square)](#-license)
+[![Made for Tinfoil](https://img.shields.io/badge/made%20for-Tinfoil-1e2327?style=for-the-badge)](https://github.com/Huntereb/Tinfoil)
+[![Runs in Browser](https://img.shields.io/badge/runs%20in-browser-00c2ff?style=for-the-badge)](#-quick-start)
+[![Windows App Available](https://img.shields.io/badge/windows-desktop%20app-ff3c50?style=for-the-badge)](#-desktop-app)
+[![Mobile Friendly](https://img.shields.io/badge/android%20%26%20ios-friendly-5be27a?style=for-the-badge)](#-mobile-android--ios)
+[![License: MIT](https://img.shields.io/badge/license-MIT-9d4edd?style=for-the-badge)](#-license)
 
 [Quick Start](#-quick-start) •
 [Features](#-features) •
@@ -30,7 +31,37 @@ No installs. No command line. Just open it and drag in a theme.
 
 It was built alongside the [A-Theme Tinfoil theme collection](https://github.com/A-Theme/Tinfoil-Themes) to make creating and tweaking themes actually pleasant.
 
-Everything runs **entirely in your browser (or as a standalone desktop app)** — no server, no account, no upload. Your theme file never leaves your machine.
+Everything runs **entirely in your browser (or as a standalone desktop app)** — no server, no account, no build step. The editor never uploads your work anywhere; the only time a file leaves your machine is if *you* choose to submit a theme to the public collection, and even then your browser hands it straight to GitHub.
+
+---
+
+## ⚡ At a glance
+
+<table>
+<tr>
+<td width="33%" valign="top" align="center">
+
+**🎨 Design**
+
+19 palette schemes · pull colors straight from your wallpaper · live Switch-accurate preview · readability warnings with one-click fixes
+
+</td>
+<td width="33%" valign="top" align="center">
+
+**🗂️ Edit**
+
+Auto-generated form from any theme · real color pickers with alpha · logo & audio preview · raw JSON when you want it
+
+</td>
+<td width="33%" valign="top" align="center">
+
+**📦 Ship**
+
+Browse the community collection · export a complete `.zip` · submit your theme for the public repo · install on-console with no PC
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -233,8 +264,21 @@ MIT — do whatever you'd like with it.
 
 ---
 
+## 🔗 The whole A-Theme project
+
 <div align="center">
 
+[![Theme-App](https://img.shields.io/badge/Theme--App-visual%20editor-00c2ff?style=for-the-badge)](https://github.com/A-Theme/Theme-App)
+[![Tinfoil-Themes](https://img.shields.io/badge/Tinfoil--Themes-theme%20database-ff3c50?style=for-the-badge)](https://github.com/A-Theme/Tinfoil-Themes)
+[![Switch-Theme-Installer](https://img.shields.io/badge/Switch--Theme--Installer-on--console%20installer-9d4edd?style=for-the-badge)](https://github.com/A-Theme/Switch-Theme-Installer)
+
+[![A-Theme](https://img.shields.io/badge/A--Theme-org-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/A-Theme)
+[![Website](https://img.shields.io/badge/Web-a--theme.ca-e60012?style=for-the-badge&logo=googlechrome&logoColor=white)](https://a-theme.ca)
+
+<br/>
+
 Made by **Aramaki** · part of the [A-Theme](https://github.com/A-Theme) project
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:00c2ff,50:9d4edd,100:ff3c50&height=100&section=footer" width="100%"/>
 
 </div>
