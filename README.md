@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:ff3c50,50:9d4edd,100:00c2ff&height=210&section=header&text=Aramaki's%20Tinfoil%20Theme%20Editor&fontSize=44&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=A%20visual%2C%20in-browser%20editor%20for%20Tinfoil%20theme.json%20files&descAlignY=56&descSize=16" width="100%"/>
-
-<img src="assets/logo.png" width="110" height="110" alt="A-Theme logo"/>
+<img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/header.png" alt="Aramaki's Tinfoil Theme Editor" width="100%"/>
 
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=620&lines=No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Pull+a+palette+straight+from+your+wallpaper.;Export+a+ready-to-use+.zip+in+one+click.)](https://git.io/typing-svg)
 
