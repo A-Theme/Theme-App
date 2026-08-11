@@ -41,14 +41,16 @@ Everything runs **entirely in your browser (or as a standalone desktop app)** �
 - **🎨 Smart color fields** — automatically detects hex colors in *any* format Tinfoil themes use (`#rrggbb`, bare `rrggbbaa`, with or without alpha) and gives you a real color picker next to the raw value, always writing back in the exact original style.
 - **🌗 Transparency (alpha) made visual** — any color with an alpha channel gets its own drag slider and a checkerboard live-preview swatch, plus a built-in diagram explaining how the hex format works, so you never have to guess what those last two digits do.
 - **📱 Android & iOS friendly** — fully responsive touch layout, and installable straight to your home screen as a standalone app (see [Mobile](#-mobile-android--ios) below).
-- **🖼️ Live 16:9 preview** — a pixel-accurate mockup of the actual Tinfoil layout (grid, selection highlight, scrollbar, progress bar, context menu) built from your theme's real values, with a generic fallback preview for non-standard schemas.
+- **🖼️ Live 16:9 preview** — a pixel-accurate mockup of the actual Tinfoil layout (grid, selection highlight, scrollbar, progress bar, context menu) built from your theme's real values, with a generic fallback preview for non-standard schemas. **Hover any part of it** to see exactly which field controls it, and **click** to jump straight down to that field in the editor — no hunting for which setting does what.
 - **🏷️ Logo preview panel** — see your logo at true size with real pixel dimensions, including themes that point at dynamic `.php` endpoints instead of static image files.
 - **🎵 Music/audio tester** — play back any audio field directly in the browser, with a local-file fallback for `sdmc:/`-style paths a browser can't fetch on its own.
-- **🌈 Palette generator** — 10 color scheme types (monochromatic, analogous, complementary, split-complementary, triadic, tetradic, pastel, vibrant/neon, shades, random) to help design a cohesive theme from a single seed color.
+- **🌈 Palette generator** — 19 color scheme types (monochromatic, analogous, complementary, split-complementary, triadic, tetradic, pastel, vibrant/neon, shades, warm, cool, grayscale, earth tones, jewel tones, sunset, ocean, duotone, metallic, random) to design a cohesive theme from a single seed color. The palette automatically sizes itself to match how many distinct colors your theme actually uses, rather than always producing a fixed five.
 - **🖌️ Extract palette from your background image** — real dominant-color clustering (k-means, not just averaging) pulls a ready-to-use palette straight out of your background art.
 - **🧩 One-click palette apply** — map generated or extracted colors onto any field in your theme with a single click, with smart auto-suggestions based on each field's role.
 - **📝 Raw JSON view** — for when you just want to paste or hand-edit directly.
-- **⬇️ Export anywhere** — download your edited theme as a ready-to-use `theme.json`.
+- **⚠️ Readability warnings** — flags color pairs that would be hard to actually read on-console (text against its background, selection text against its highlight, progress bar against its track) using the real WCAG contrast formula, plus a separate check for colors so similar they'd be hard to tell apart. Every warning comes with a one-click suggested fix that accounts for transparency, not just the raw hex.
+- **📦 Export as a complete `.zip`** — downloads your edited `theme.json` bundled with its background image, logo, and audio, ready to drop straight onto your SD card. Assets that genuinely can't be included (device paths with no local file, or hosts that block direct fetching) are reported rather than silently skipped.
+- **📤 Submit your theme to the collection** — a guided flow that packages your theme and opens a prefilled submission on [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) for review. All you need is a free GitHub account — no tokens or setup.
 
 ---
 
@@ -59,7 +61,7 @@ Everything runs **entirely in your browser (or as a standalone desktop app)** �
 3. Click **🌐 Browse Themes** to pick a starting point from the live community collection — or drag your own `theme.json` onto the page, or use **Open theme.json**.
    - Don't have one yet and don't want to browse? Grab **[`sample.json`](sample.json)** from this repo — a real, complete theme file you can load straight in and start tweaking.
 4. Edit anything using the generated form — colors, image paths, numbers, toggles, all of it.
-5. Hit **Download** to export your changes.
+5. Hit **Download .zip** to export your theme complete with its background, logo, and audio — or **Submit to A-Theme** to send it in for the public collection.
 
 No build step. No dependencies. No install. It's one HTML file.
 
@@ -102,7 +104,15 @@ The **live preview** at the top updates as you type, rendering an approximation 
 You can also click **🎨 Extract palette from background** to pull a palette directly out of your theme's background image instead of starting from a seed color.
 
 ### Exporting
-Click **⬇ Download** at any time to save your edited `theme.json`. Use **↺ Reset** to discard changes and start over from the originally loaded file.
+Click **⬇ Download .zip** at any time to save your theme as a complete package — the edited `theme.json` alongside its background image, logo, and audio file, ready to extract straight to `switch/tinfoil/themes/` on your SD card. If an asset can't be included (a `sdmc:/` device path with no local file browsed for it, or a host that blocks direct fetching), it's reported in the download message rather than quietly left out.
+
+Use **↺ Reset** to discard changes and start over from the originally loaded file.
+
+### Submitting your theme
+
+Click **📤 Submit to A-Theme** to send your creation in for the public collection. The flow walks you through naming it, crediting yourself, and downloading your `.zip`, then opens a prefilled submission on [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) — you just drag your `.zip` into it and hit submit.
+
+All you need is a free GitHub account; there are no tokens to create or settings to configure. Nothing is uploaded by the editor itself — your file goes straight from your computer to GitHub when you attach it. Submissions are reviewed before being added to the collection.
 
 ---
 
@@ -188,7 +198,7 @@ Once that's live:
 ## ❓ FAQ
 
 **Does this upload my theme file anywhere?**
-No — nothing you load, edit, or export ever leaves your browser. The one thing that *does* talk to the network is the **Browse Themes** feature, which fetches the public theme list and zip files from this repo (and displays what's already public there) — it never sends anything back.
+No — nothing you load, edit, or export is ever uploaded by the editor itself. Two features do talk to the network, both only when you choose to use them: **Browse Themes** fetches the public theme list and zip files from this repo (it never sends anything back), and **Submit to A-Theme** opens a GitHub page where *you* attach your file — the editor never transmits it, your browser hands it directly to GitHub when you drag it in.
 
 **How does "Browse Themes" work without a server?**
 It fetches `themes.json` and the selected theme's `.zip` directly from GitHub, then unzips it entirely client-side using an embedded copy of [JSZip](https://stuk.github.io/jszip/) — the same trust model as any other static webpage, just doing the unzipping in JavaScript instead of on a server.
