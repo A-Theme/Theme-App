@@ -195,6 +195,14 @@
   .browse-item .tag{font-size:10px;color:var(--joy-blue);border:1px solid var(--line);border-radius:4px;padding:1px 6px;flex:none;}
   .browse-item .spinner{font-size:11px;color:var(--text-2);flex:none;}
   .browse-footer{margin-top:12px;font-size:11px;color:var(--text-2);line-height:1.5;}
+  .submit-step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);}
+  .submit-step:last-of-type{border-bottom:none;}
+  .submit-step > div{flex:1;}
+  .submit-step-num{flex:none;width:22px;height:22px;border-radius:50%;background:var(--joy-blue);color:#04121c;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px;}
+  #submitModal input[type=text], #submitModal textarea{background:var(--bg-2);border:1px solid var(--line);
+    color:var(--text-0);border-radius:7px;padding:8px 10px;font-size:12.5px;font-family:var(--sans);}
+  #submitModal textarea{resize:vertical;}
   .browse-footer code{background:var(--bg-2);border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--text-1);font-family:var(--mono);}
 
   /* layout */
@@ -357,7 +365,8 @@
       <input type="file" id="fileInput" accept=".json,application/json">
       <button id="resetBtn" disabled>↺ Reset</button>
       <button id="rawBtn" disabled>{ } Raw JSON</button>
-      <button class="primary" id="downloadBtn" disabled>⬇ Download</button>
+      <button class="primary" id="downloadBtn" disabled>⬇ Download .zip</button>
+      <button id="submitThemeBtn" disabled>📤 Submit to A-Theme</button>
     </div>
   </div>
 
@@ -372,6 +381,65 @@
       <div class="pastebox">
         <textarea id="pasteArea" placeholder='...or paste raw JSON here, e.g. { "background_uri": "...", "info_text_color": "#ffffff", ... }'></textarea>
         <div class="paste-row"><button id="pasteLoadBtn">Load pasted JSON</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="submitModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>📤 Submit your theme to A-Theme</h3>
+        <button class="mini" id="closeSubmitModal">✕ Close</button>
+      </div>
+      <div style="font-size:12.5px;color:var(--text-1);line-height:1.6;">
+        <p style="margin-top:0;">Your theme gets reviewed before it goes into the public collection — this opens a submission on GitHub where it can be checked over first.</p>
+
+        <div class="submit-step">
+          <span class="submit-step-num">1</span>
+          <div>
+            <strong>Name your theme</strong>
+            <input type="text" id="submitThemeName" placeholder="e.g. Midnight Neon" style="width:100%;margin-top:6px;">
+          </div>
+        </div>
+
+        <div class="submit-step">
+          <span class="submit-step-num">2</span>
+          <div>
+            <strong>Credit yourself (optional)</strong>
+            <input type="text" id="submitAuthor" placeholder="Your name or Discord handle" style="width:100%;margin-top:6px;">
+          </div>
+        </div>
+
+        <div class="submit-step">
+          <span class="submit-step-num">3</span>
+          <div>
+            <strong>Anything else worth mentioning? (optional)</strong>
+            <textarea id="submitNotes" placeholder="Where the background came from, what inspired it, anything the reviewer should know…" style="width:100%;margin-top:6px;min-height:60px;"></textarea>
+          </div>
+        </div>
+
+        <div class="submit-step">
+          <span class="submit-step-num">4</span>
+          <div>
+            <strong>Download your theme .zip</strong>
+            <div style="color:var(--text-2);margin-top:2px;">You'll attach this to the submission in the next step.</div>
+            <button class="mini" id="submitDownloadZipBtn" style="margin-top:6px;">⬇ Download the .zip</button>
+            <span id="submitZipStatus" style="margin-left:8px;color:var(--joy-blue);"></span>
+          </div>
+        </div>
+
+        <div class="submit-step">
+          <span class="submit-step-num">5</span>
+          <div>
+            <strong>Open the submission form and attach it</strong>
+            <div style="color:var(--text-2);margin-top:2px;">Everything you typed above gets filled in automatically — just <strong>drag the .zip you downloaded into the comment box</strong> before clicking Submit. GitHub can't accept the file automatically, so this last step has to be done by hand.</div>
+            <button class="primary" id="openSubmitIssueBtn" style="margin-top:8px;">📤 Open submission form ↗</button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--text-2);font-size:11.5px;">
+          You'll need a free GitHub account to submit (no token or setup needed — just sign in). Nothing is uploaded from this app itself; the file goes straight from your computer to GitHub when you attach it.
+        </div>
       </div>
     </div>
   </div>
@@ -587,6 +655,15 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   const pasteArea = document.getElementById('pasteArea');
   const pasteLoadBtn = document.getElementById('pasteLoadBtn');
   const browseThemesBtn = document.getElementById('browseThemesBtn');
+  const submitThemeBtn = document.getElementById('submitThemeBtn');
+  const submitModal = document.getElementById('submitModal');
+  const closeSubmitModal = document.getElementById('closeSubmitModal');
+  const submitThemeName = document.getElementById('submitThemeName');
+  const submitAuthor = document.getElementById('submitAuthor');
+  const submitNotes = document.getElementById('submitNotes');
+  const submitDownloadZipBtn = document.getElementById('submitDownloadZipBtn');
+  const submitZipStatus = document.getElementById('submitZipStatus');
+  const openSubmitIssueBtn = document.getElementById('openSubmitIssueBtn');
   const browseThemesBtnEmpty = document.getElementById('browseThemesBtnEmpty');
   const browseModal = document.getElementById('browseModal');
   const closeBrowseModal = document.getElementById('closeBrowseModal');
@@ -658,6 +735,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     resetBtn.disabled = false;
     downloadBtn.disabled = false;
     rawBtn.disabled = false;
+    submitThemeBtn.disabled = false;
     autoSeedPalette();
     renderAll();
   }
@@ -696,17 +774,221 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     showToast('Reverted to original');
   });
 
-  downloadBtn.addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  // Builds a complete theme .zip -- the edited config plus every asset
+  // the theme references (background image, logo, audio) that we actually
+  // have real data for. Assets come from three places, in priority order:
+  //   1. zipAssetBlobs -- already-downloaded files from a theme loaded via
+  //      the community browser. Always available, no network needed.
+  //   2. A locally-browsed replacement (e.g. a logo the user picked).
+  //   3. A remote http(s) URL -- fetched at download time. This one can
+  //      fail on hosts that don't send CORS headers (the same restriction
+  //      that affects palette extraction); when it does, that asset is
+  //      skipped and reported rather than silently omitted.
+  async function buildThemeZip(){
+    const zip = new JSZip();
+    const configName = 'theme.json';
+    zip.file(configName, JSON.stringify(data, null, 2));
+
+    const included = [];
+    const skipped = [];
+
+    // Collect every asset reference the theme actually declares.
+    const refs = [];
+    const bgImage = get(['background','image']);
+    if(typeof bgImage === 'string' && bgImage.trim()) refs.push({ ref: bgImage.trim(), kind: 'background' });
+    const logo = get(['logo']);
+    if(typeof logo === 'string' && logo.trim()) refs.push({ ref: logo.trim(), kind: 'logo' });
+    findAudioLeaves().forEach(leaf=>{
+      if(typeof leaf.value === 'string' && leaf.value.trim()) refs.push({ ref: leaf.value.trim(), kind: 'audio' });
+    });
+
+    for(const { ref, kind } of refs){
+      const slash = ref.lastIndexOf('/');
+      const basename = (slash >= 0 ? ref.slice(slash+1) : ref).split('?')[0];
+      if(!basename){ continue; }
+
+      // 2. a locally-browsed logo replacement takes priority for the logo slot
+      if(kind === 'logo' && localLogoUrl && localLogoName){
+        try{
+          const resp = await fetch(localLogoUrl);
+          zip.file(localLogoName, await resp.blob());
+          included.push(localLogoName + ' (local file)');
+          continue;
+        }catch(e){ /* fall through to the other sources */ }
+      }
+
+      // 1. already-downloaded bundled asset
+      const bundled = zipAssetBlobs[basename] || zipAssetBlobs[basename.toLowerCase()];
+      if(bundled && bundled.blob){
+        zip.file(basename, bundled.blob);
+        included.push(basename);
+        continue;
+      }
+
+      // 3. remote URL -- may fail on non-CORS hosts
+      if(/^https?:\/\//i.test(ref)){
+        try{
+          const resp = await fetch(ref);
+          if(!resp.ok) throw new Error('HTTP ' + resp.status);
+          zip.file(basename, await resp.blob());
+          included.push(basename);
+        }catch(e){
+          skipped.push({ name: basename, reason: 'could not be fetched (the host may not allow it)' });
+        }
+        continue;
+      }
+
+      // a device path (sdmc:/...) with nothing local to draw from
+      skipped.push({ name: basename, reason: 'is a Switch device path, so there is no file here to bundle' });
+    }
+
+    return { zip, included, skipped };
+  }
+
+  // Shared by both the main Download button and the submission flow's
+  // step 4, so there's exactly one zip-building path to keep correct.
+  async function downloadThemeZip(){
+    const { zip, included, skipped } = await buildThemeZip();
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const base = fileName.replace(/\.(json|zip)$/i, '') || 'theme';
+    const zipName = base + '.zip';
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName.endsWith('.json') ? fileName : fileName + '.json';
+    a.download = zipName;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    showToast('Downloaded ' + a.download);
+
+    if(skipped.length){
+      const list = skipped.map(s => '• ' + s.name + ' — ' + s.reason).join('\n');
+      console.warn('Assets not included in the zip:\n' + list);
+    }
+    return { zipName, included, skipped };
+  }
+
+  downloadBtn.addEventListener('click', async ()=>{
+    const originalLabel = downloadBtn.textContent;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Building zip…';
+    try{
+      const { zipName, included, skipped } = await downloadThemeZip();
+      let msg = 'Downloaded ' + zipName;
+      if(included.length) msg += ' with ' + included.length + ' asset' + (included.length === 1 ? '' : 's');
+      if(skipped.length) msg += ' (' + skipped.length + ' could not be included)';
+      showToast(msg);
+    }catch(err){
+      console.error('Zip build failed:', err);
+      showToast('Could not build the zip — see the browser console for details');
+    }finally{
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = originalLabel;
+    }
+  });
+
+  // ---------- submit a theme to the A-Theme collection ----------
+  // Opens a prefilled GitHub issue in the Tinfoil-Themes repo. GitHub
+  // supports prefilling an issue's title and body via URL query params,
+  // but there is NO way to attach a file that way -- attachments have to
+  // be dragged in by the person submitting. So the flow is: build and
+  // download the zip locally, prefill everything else, and tell them
+  // clearly that the file itself is the one manual step. Nothing is
+  // uploaded by this app; the file goes straight from their machine to
+  // GitHub.
+  const SUBMIT_REPO = 'A-Theme/Tinfoil-Themes';
+
+  function openSubmitModal(){
+    if(!data){ showToast('Load or create a theme first'); return; }
+    submitModal.style.display = 'flex';
+    submitZipStatus.textContent = '';
+    if(!submitThemeName.value){
+      const guess = fileName.replace(/\.(json|zip)$/i, '');
+      if(guess && guess.toLowerCase() !== 'theme') submitThemeName.value = guess.replace(/_/g, ' ');
+    }
+  }
+  function closeSubmitModalFn(){ submitModal.style.display = 'none'; }
+
+  submitThemeBtn.addEventListener('click', openSubmitModal);
+  closeSubmitModal.addEventListener('click', closeSubmitModalFn);
+  submitModal.addEventListener('click', (e)=>{ if(e.target === submitModal) closeSubmitModalFn(); });
+
+  submitDownloadZipBtn.addEventListener('click', async ()=>{
+    const original = submitDownloadZipBtn.textContent;
+    submitDownloadZipBtn.disabled = true;
+    submitDownloadZipBtn.textContent = 'Building…';
+    try{
+      const { zipName, included, skipped } = await downloadThemeZip();
+      submitZipStatus.textContent = '✓ ' + zipName +
+        (included.length ? ' (' + included.length + ' asset' + (included.length===1?'':'s') + ')' : '') +
+        (skipped.length ? ' — ' + skipped.length + ' skipped' : '');
+    }catch(err){
+      console.error('Zip build failed:', err);
+      submitZipStatus.textContent = '✕ could not build the zip';
+    }finally{
+      submitDownloadZipBtn.disabled = false;
+      submitDownloadZipBtn.textContent = original;
+    }
+  });
+
+  openSubmitIssueBtn.addEventListener('click', ()=>{
+    const name = (submitThemeName.value || '').trim();
+    if(!name){
+      showToast('Give your theme a name first');
+      submitThemeName.focus();
+      return;
+    }
+    const author = (submitAuthor.value || '').trim();
+    const notes = (submitNotes.value || '').trim();
+
+    // Summarize the theme's own settings so the reviewer can see what it
+    // is without opening the zip. Kept deliberately compact -- GitHub
+    // returns a 414 URI Too Long if the prefilled body gets too large.
+    const colors = [];
+    collectColors(data, colors);
+    const distinct = countDistinctColors();
+    const bgImage = get(['background','image']);
+    const hasAudio = findAudioLeaves().length > 0;
+
+    const lines = [
+      '### Theme submission',
+      '',
+      '**Name:** ' + name,
+    ];
+    if(author) lines.push('**By:** ' + author);
+    lines.push('');
+    lines.push('**Details**');
+    lines.push('- Colors: ' + distinct + ' distinct across ' + colors.length + ' fields');
+    if(typeof bgImage === 'string' && bgImage) lines.push('- Background image: yes');
+    lines.push('- Audio: ' + (hasAudio ? 'yes' : 'no'));
+    lines.push('');
+    if(notes){
+      lines.push('**Notes**');
+      lines.push(notes);
+      lines.push('');
+    }
+    lines.push('---');
+    lines.push('');
+    lines.push('⚠️ **Attach the theme `.zip` to this issue before submitting** — drag it into this box. (Made with the [A-Theme editor](https://github.com/A-Theme/Theme-App).)');
+
+    const body = lines.join('\n');
+    const url = 'https://github.com/' + SUBMIT_REPO + '/issues/new'
+      + '?title=' + encodeURIComponent('[Theme] ' + name)
+      + '&labels=' + encodeURIComponent('theme-submission')
+      + '&body=' + encodeURIComponent(body);
+
+    // Guard against GitHub's URI length limit -- fall back to a shorter
+    // body rather than sending the person to a 414 error page.
+    const finalUrl = url.length > 6000
+      ? 'https://github.com/' + SUBMIT_REPO + '/issues/new'
+          + '?title=' + encodeURIComponent('[Theme] ' + name)
+          + '&labels=' + encodeURIComponent('theme-submission')
+          + '&body=' + encodeURIComponent('### Theme submission\n\n**Name:** ' + name + '\n\n⚠️ **Attach the theme `.zip` to this issue before submitting.**')
+      : url;
+
+    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+    showToast('Opened the submission form — remember to attach your .zip');
   });
 
   rawBtn.addEventListener('click', ()=>{
