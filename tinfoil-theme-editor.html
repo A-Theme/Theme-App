@@ -850,8 +850,20 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   async function downloadThemeZip(){
     const { zip, included, skipped } = await buildThemeZip();
     const blob = await zip.generateAsync({ type: 'blob' });
-    const base = fileName.replace(/\.(json|zip)$/i, '') || 'theme';
-    const zipName = base + '.zip';
+
+    // Name the zip after the theme, not after whatever the config file
+    // happened to be called. "settings.zip" or "theme.zip" tells nobody
+    // which theme it is -- which matters most during submission, where a
+    // reviewer may be looking at several at once. Priority: the name
+    // typed into the submission form, then the loaded theme's own name,
+    // and only fall back to "theme" if both are generic.
+    const typedName = (submitThemeName && submitThemeName.value || '').trim();
+    let base = typedName.replace(/[^\w\-. ]+/g, '').replace(/\s+/g, '_');
+    if(!base){
+      base = fileName.replace(/\.(json|zip)$/i, '');
+      if(/^(theme|settings)$/i.test(base)) base = '';
+    }
+    const zipName = (base || 'theme') + '.zip';
 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2891,7 +2903,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
       }));
       zipAssetBlobs = newAssetBlobs;
 
-      loadJSON(configText, 'theme.json', true /* keep the zipAssetBlobs we just built */);
+      // Name the loaded theme after its actual folder name (e.g.
+      // "Aramaki_8ball"), not the generic config filename -- otherwise
+      // every browsed theme downloads as "theme.zip" regardless of which
+      // one it is, and the submission flow starts with a useless default
+      // name too.
+      const { folder } = deriveCommunityThemeName(zipUrl);
+      loadJSON(configText, folder || 'theme', true /* keep the zipAssetBlobs we just built */);
       closeBrowseModalFn();
       showToast('Loaded "' + themeName + '" from the community database');
     }catch(err){
