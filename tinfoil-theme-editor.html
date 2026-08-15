@@ -786,7 +786,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   //      skipped and reported rather than silently omitted.
   async function buildThemeZip(){
     const zip = new JSZip();
-    const configName = 'theme.json';
+    // Tinfoil reads "settings.json" from each theme folder -- confirmed
+    // against a real SD card (11 of 12 working themes used that name; the
+    // lone theme.json folder did NOT load). The editor accepts either name
+    // on read, but must always write settings.json or the exported theme
+    // installs and then silently falls back to the default.
+    const configName = 'settings.json';
     zip.file(configName, JSON.stringify(data, null, 2));
 
     const included = [];
