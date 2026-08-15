@@ -1,0 +1,11 @@
+{
+  "name": "aramaki-tinfoil-theme-editor",
+  "productName": "Aramaki's Tinfoil Theme Editor",
+  "version": "2.0.1",
+  "description": "Visual editor for Tinfoil theme files (settings.json)",
+  "main": "main.js",
+  "author": "Aramaki",
+  "devDependencies": {
+    "electron-packager": "^17.1.2"
+  }
+}
