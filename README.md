@@ -25,7 +25,7 @@
 
 ## 🧾 What is this?
 
-**Aramaki's Tinfoil Theme Editor** is a single self-contained web app for creating and editing [Tinfoil](https://github.com/Huntereb/Tinfoil) `theme.json` files — no more hand-editing raw JSON and guessing what a color or path field does. Load your theme, see and tweak every field through a proper UI, preview it live, and export it back out.
+**Aramaki's Tinfoil Theme Editor** is a single self-contained web app for creating and editing [Tinfoil](https://github.com/Huntereb/Tinfoil) theme config files (`settings.json`) — no more hand-editing raw JSON and guessing what a color or path field does. Load your theme, see and tweak every field through a proper UI, preview it live, and export it back out.
 
 It was built alongside the [A-Theme Tinfoil theme collection](https://github.com/A-Theme/Tinfoil-Themes) to make creating and tweaking themes actually pleasant.
 
@@ -66,7 +66,7 @@ Browse the community collection · export a complete `.zip` · submit your theme
 ## ✨ Features
 
 - **🌐 Browse & load themes from the community database** — no file needed to get started: pull up the live list of every theme in [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes), search it, and load one straight into the editor. Downloads and extracts the theme's `.zip` right in your browser (using an embedded copy of JSZip — nothing sent to any server), and keeps its bundled logo/background/audio files working automatically in every preview, no extra setup.
-- **🗂️ Auto-generated editor** — drop in any `theme.json` and get a full form built from its actual structure: nested objects become collapsible sections, arrays get add/remove controls, no schema hardcoding required.
+- **🗂️ Auto-generated editor** — drop in any theme config (`settings.json`, or the older `theme.json`) and get a full form built from its actual structure: nested objects become collapsible sections, arrays get add/remove controls, no schema hardcoding required.
 - **🎨 Smart color fields** — automatically detects hex colors in *any* format Tinfoil themes use (`#rrggbb`, bare `rrggbbaa`, with or without alpha) and gives you a real color picker next to the raw value, always writing back in the exact original style.
 - **🌗 Transparency (alpha) made visual** — any color with an alpha channel gets its own drag slider and a checkerboard live-preview swatch, plus a built-in diagram explaining how the hex format works, so you never have to guess what those last two digits do.
 - **📱 Android & iOS friendly** — fully responsive touch layout, and installable straight to your home screen as a standalone app (see [Mobile](#-mobile-android--ios) below).
@@ -78,7 +78,7 @@ Browse the community collection · export a complete `.zip` · submit your theme
 - **🧩 One-click palette apply** — map generated or extracted colors onto any field in your theme with a single click, with smart auto-suggestions based on each field's role.
 - **📝 Raw JSON view** — for when you just want to paste or hand-edit directly.
 - **⚠️ Readability warnings** — flags color pairs that would be hard to actually read on-console (text against its background, selection text against its highlight, progress bar against its track) using the real WCAG contrast formula, plus a separate check for colors so similar they'd be hard to tell apart. Every warning comes with a one-click suggested fix that accounts for transparency, not just the raw hex.
-- **📦 Export as a complete `.zip`** — downloads your edited `theme.json` bundled with its background image, logo, and audio, ready to drop straight onto your SD card. Assets that genuinely can't be included (device paths with no local file, or hosts that block direct fetching) are reported rather than silently skipped.
+- **📦 Export as a complete `.zip`** — downloads your edited `settings.json` bundled with its background image, logo, and audio, ready to drop straight onto your SD card. Assets that genuinely can't be included (device paths with no local file, or hosts that block direct fetching) are reported rather than silently skipped.
 - **📤 Submit your theme to the collection** — a guided flow that packages your theme and opens a prefilled submission on [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) for review. All you need is a free GitHub account — no tokens or setup.
 
 ---
@@ -87,7 +87,7 @@ Browse the community collection · export a complete `.zip` · submit your theme
 
 1. **[Download `tinfoil-theme-editor.html`](tinfoil-theme-editor.html)** from this repo (or grab the [Windows desktop app](#-desktop-app) if you'd rather not use a browser).
 2. Open the file in any modern browser (Chrome, Edge, or Firefox — just double-click it).
-3. Click **🌐 Browse Themes** to pick a starting point from the live community collection — or drag your own `theme.json` onto the page, or use **Open theme.json**.
+3. Click **🌐 Browse Themes** to pick a starting point from the live community collection — or drag your own `settings.json` onto the page, or use **Open theme file**.
    - Don't have one yet and don't want to browse? Grab **[`sample.json`](sample.json)** from this repo — a real, complete theme file you can load straight in and start tweaking.
 4. Edit anything using the generated form — colors, image paths, numbers, toggles, all of it.
 5. Hit **Download .zip** to export your theme complete with its background, logo, and audio — or **Submit to A-Theme** to send it in for the public collection.
@@ -101,8 +101,8 @@ No build step. No dependencies. No install. It's one HTML file.
 ### Loading a theme
 You can get a theme into the editor four ways:
 - **Browse the community database** — click **🌐 Browse Themes**, search the live list pulled from this repo's `themes.json`, and click one. It downloads and extracts that theme's `.zip` right in your browser (no server involved — an embedded copy of [JSZip](https://stuk.github.io/jszip/) does the unzipping client-side) and loads its config straight into the editor. Every other file bundled in that zip (logo, background image, audio) stays available too, so previews work immediately without any extra setup.
-- **Drag and drop** your own `theme.json` onto the page
-- Click **📂 Open theme.json** and pick it from a file dialog
+- **Drag and drop** your own `settings.json` (or an older `theme.json`) onto the page
+- Click **📂 Open theme file** and pick it from a file dialog
 - **Paste raw JSON** directly into the text box on the start screen
 
 ### Editing fields
@@ -133,7 +133,7 @@ The **live preview** at the top updates as you type, rendering an approximation 
 You can also click **🎨 Extract palette from background** to pull a palette directly out of your theme's background image instead of starting from a seed color.
 
 ### Exporting
-Click **⬇ Download .zip** at any time to save your theme as a complete package — the edited `theme.json` alongside its background image, logo, and audio file, ready to extract straight to `switch/tinfoil/themes/` on your SD card. If an asset can't be included (a `sdmc:/` device path with no local file browsed for it, or a host that blocks direct fetching), it's reported in the download message rather than quietly left out.
+Click **⬇ Download .zip** at any time to save your theme as a complete package — the edited `settings.json` alongside its background image, logo, and audio file, ready to extract straight to `switch/tinfoil/themes/` on your SD card. If an asset can't be included (a `sdmc:/` device path with no local file browsed for it, or a host that blocks direct fetching), it's reported in the download message rather than quietly left out.
 
 Use **↺ Reset** to discard changes and start over from the originally loaded file.
 
@@ -147,7 +147,7 @@ All you need is a free GitHub account; there are no tokens to create or settings
 
 ## 🧬 Supported Theme Format
 
-This editor targets Tinfoil's `theme.json` schema, structured like:
+This editor targets Tinfoil's theme config schema — the `settings.json` Tinfoil reads from each theme folder — structured like:
 
 ```json
 {
@@ -236,7 +236,7 @@ It fetches `themes.json` and the selected theme's `.zip` directly from GitHub, t
 Yes — the field editor works on arbitrary JSON structures. The live preview is most accurate for the standard schema shown above, but falls back gracefully otherwise.
 
 **Why can't I see my logo or hear my music preview?**
-If your `theme.json` points to an `sdmc:/` path, that's a Nintendo Switch SD card path a browser can't reach on its own. If you loaded the theme via **🌐 Browse Themes**, this is already handled automatically — its bundled logo/audio files are used directly. If you loaded a `theme.json` manually and it references local files you don't have, use the **Browse local file** option in the Logo or Music panel to preview the actual file from your computer instead.
+If your theme config points to an `sdmc:/` path, that's a Nintendo Switch SD card path a browser can't reach on its own. If you loaded the theme via **🌐 Browse Themes**, this is already handled automatically — its bundled logo/audio files are used directly. If you loaded a config manually and it references local files you don't have, use the **Browse local file** option in the Logo or Music panel to preview the actual file from your computer instead.
 
 **Where can I find more Tinfoil themes?**
 Check out [A-Theme/Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) for a large collection of ready-made themes (or just click **🌐 Browse Themes** right in the editor), or join the Discord linked there for requests.
