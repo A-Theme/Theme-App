@@ -1,19 +1,21 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/header.png" alt="Aramaki's Tinfoil Theme Editor" width="100%"/>
+<img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/header.png" alt="Aramaki's Theme Editors" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=620&lines=No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Pull+a+palette+straight+from+your+wallpaper.;Export+a+ready-to-use+.zip+in+one+click.)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=660&lines=Two+editors.+Two+apps.+One+page.;No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Export+a+ready-to-use+pack+in+one+click.)](https://git.io/typing-svg)
 
-[![Made for Tinfoil](https://img.shields.io/badge/made%20for-Tinfoil-1e2327?style=for-the-badge)](https://github.com/Huntereb/Tinfoil)
+[![Tinfoil editor](https://img.shields.io/badge/editor-Tinfoil-ff3c50?style=for-the-badge)](tinfoil-theme-editor.html)
+[![RomM editor](https://img.shields.io/badge/editor-RomM%20client-4C8DFF?style=for-the-badge)](romm-theme-editor.html)
 [![Runs in Browser](https://img.shields.io/badge/runs%20in-browser-00c2ff?style=for-the-badge)](#-quick-start)
-[![Windows App Available](https://img.shields.io/badge/windows-desktop%20app-ff3c50?style=for-the-badge)](#-desktop-app)
+[![Desktop App](https://img.shields.io/badge/windows-desktop%20app-9d4edd?style=for-the-badge)](#-desktop-app)
 [![Mobile Friendly](https://img.shields.io/badge/android%20%26%20ios-friendly-5be27a?style=for-the-badge)](#-mobile-android--ios)
-[![License: MIT](https://img.shields.io/badge/license-MIT-9d4edd?style=for-the-badge)](#-license)
+[![License: MIT](https://img.shields.io/badge/license-MIT-8A6BFF?style=for-the-badge)](#-license)
 
 [Quick Start](#-quick-start) •
 [Features](#-features) •
 [How to Use](#-how-to-use) •
 [Supported Format](#-supported-theme-format) •
+[RomM Editor](#-also-here-the-romm-theme-editor) •
 [Desktop App](#-desktop-app) •
 [Mobile](#-mobile-android--ios) •
 [On-Console](#-on-console-installer) •
@@ -25,9 +27,24 @@
 
 ## 🧾 What is this?
 
-**Aramaki's Tinfoil Theme Editor** is a single self-contained web app for creating and editing [Tinfoil](https://github.com/Huntereb/Tinfoil) theme config files (`settings.json`) — no more hand-editing raw JSON and guessing what a color or path field does. Load your theme, see and tweak every field through a proper UI, preview it live, and export it back out.
+**Aramaki's Theme Editors** — two self-contained web apps in one repo, for
+theming two different Switch apps. No hand-editing raw JSON and guessing what a
+colour or path field does: load a theme, tweak every field through a proper UI,
+preview it live, export it back out.
 
-It was built alongside the [A-Theme Tinfoil theme collection](https://github.com/A-Theme/Tinfoil-Themes) to make creating and tweaking themes actually pleasant.
+| editor | themes | file |
+|---|---|---|
+| **[Tinfoil Theme Editor](tinfoil-theme-editor.html)** | [Tinfoil](https://github.com/Huntereb/Tinfoil), the Switch shop app | `settings.json` |
+| **[RomM Theme Editor](romm-theme-editor.html)** | the RomM Switch client, an SDL2 homebrew app | `theme.json` |
+
+[`index.html`](index.html) is a launcher offering both — it is what the desktop
+app opens. Each editor also carries its **own** web manifest, so they install as
+two separate apps and can sit side by side on a home screen.
+
+The Tinfoil one was built alongside the [A-Theme Tinfoil theme collection](https://github.com/A-Theme/Tinfoil-Themes);
+the RomM one alongside [RomM-Themes](https://github.com/A-Theme/RomM-Themes).
+Most of this README describes the Tinfoil editor, since it is the older and
+larger of the two — the RomM editor has [its own section](#-also-here-the-romm-theme-editor).
 
 Everything runs **entirely in your browser (or as a standalone desktop app)** — no server, no account, no build step. The editor never uploads your work anywhere; the only time a file leaves your machine is if *you* choose to submit a theme to the public collection, and even then your browser hands it straight to GitHub.
 
@@ -190,11 +207,24 @@ The editor isn't hardcoded to this exact shape — if it detects a different str
 
 ## 💻 Desktop App
 
-Prefer not to open a browser? A packaged Windows desktop version is available on the [**Releases**](../../releases/latest) page — same app, wrapped in its own window with a taskbar icon, no browser required.
+Prefer not to open a browser? A packaged Windows desktop version is available on the [**Releases**](../../releases/latest) page — same apps, wrapped in their own window with a taskbar icon, no browser required.
 
 **[⬇ Download the latest Windows build](../../releases/latest)**
 
+It opens the launcher, so **both** editors are one click away in the same window.
+
 > **Note:** it ships as a folder, not a single `.exe` — that's normal for Electron-based apps, which bundle a full runtime alongside the executable. Unzip the whole folder and run the `.exe` from inside it.
+
+### Building it yourself
+
+```bash
+npm install
+npm start            # run it
+npm run package:win  # build a Windows folder into dist/
+```
+
+`main.js` opens [`index.html`](index.html) — the launcher — and sends external
+links to your real browser rather than trapping them in a chromeless window.
 
 ---
 
