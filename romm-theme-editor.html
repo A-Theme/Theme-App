@@ -551,6 +551,47 @@ function safeName(n){
   return out || 'asset';
 }
 
+/** Which slots hold an asset file, and the prefix each uses on a collision. */
+const ASSET_SLOTS = [
+  {key:'bg',     prefix:'bg'},
+  {key:'anim',   prefix:'anim'},
+  {key:'font',   prefix:'font'},
+  {key:'mascot', prefix:'mascot'},
+  {key:'bgm',    prefix:'bgm'}
+];
+
+/**
+ * Make `name` unique across the other asset slots.
+ *
+ * Two different files can easily share a base name - picking art.png for the
+ * background and a different art.png for the mascot is an ordinary thing to
+ * do. Both slots would then claim the same name, theme.json would point both
+ * fields at one file, and the pack would carry two entries at the same path,
+ * of which unzip keeps only the last. The background would vanish silently and
+ * the theme would ship broken. So a collision is renamed here, at the moment
+ * of picking, which keeps theme.json and the pack incapable of disagreeing.
+ */
+function uniqueAssetName(slotKey, name){
+  const taken = () => ASSET_SLOTS
+    .filter(s => s.key !== slotKey && state[s.key] && state[s.key].name)
+    .map(s => state[s.key].name.toLowerCase());
+
+  if (!taken().includes(name.toLowerCase())) return name;
+
+  const prefix = (ASSET_SLOTS.find(s => s.key === slotKey) || {prefix:'asset'}).prefix;
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext  = dot > 0 ? name.slice(dot) : '';
+
+  let candidate = `${prefix}-${stem}${ext}`;
+  let n = 2;
+  while (taken().includes(candidate.toLowerCase())) {
+    candidate = `${prefix}-${stem}-${n}${ext}`;
+    n++;
+  }
+  return candidate;
+}
+
 /* ---------------------------------------------------------------------------
    Build the colour controls
    --------------------------------------------------------------------------- */
@@ -618,7 +659,10 @@ function buildColorList(){
       if (p){ state.colors[role.k] = toHex(p); render({skipHex:role.k}); }
       else { renderChecks(); }
     });
-    hex.addEventListener('blur', () => { hex.classList.remove('bad'); syncColorInputs(); });
+    /* Full render, not just syncColorInputs: abandoning a bad value restores
+       the box from state, so the "not a hex colour" finding it produced has to
+       be cleared too or it sits there contradicting the field. */
+    hex.addEventListener('blur', () => { hex.classList.remove('bad'); render(); });
     reset.addEventListener('click', () => {
       state.colors[role.k] = DEFAULTS[role.k];
       render();
@@ -847,11 +891,15 @@ function renderChecks(){
   const scrimC = parseHex(c('scrim'));
   if (scrimC && scrimC.a === 255) warn('scrim is fully opaque - the screen behind a dialog will be hidden entirely.');
 
-  /* Background */
-  if (state.bg.dataUrl && state.bg.dim === 0){
+  /* Background.
+     These test the NAME, not the loaded bytes: after importing a theme.json
+     the editor knows an image is referenced but cannot have its contents, and
+     warning "there is no background image" about a theme that plainly names
+     one is just wrong. */
+  if (state.bg.name && state.bg.dim === 0){
     warn('A background image with dim 0 often makes body text hard to read. Try 0.3.');
   }
-  if (!state.bg.dataUrl && state.motion.kind !== 'none'){
+  if (!state.bg.name && state.motion.kind !== 'none'){
     warn(`Motion "${state.motion.kind}" is set but there is no background image to move.`);
   }
 
@@ -878,7 +926,7 @@ function renderChecks(){
       warn('Animated GIF needs SDL2_image 2.6+ on the client. A sheet always works, and is one ' +
            'texture no matter how many frames.');
     }
-    if (!state.bg.dataUrl){
+    if (!state.bg.name){
       warn('An animated theme should also ship a still background image - it is the fallback ' +
            'when the animation cannot be used.');
     }
@@ -896,6 +944,23 @@ function renderChecks(){
   if (state.bgm.name && state.bgm.off){
     warn('A music track is chosen but music is also silenced - the track will not play.');
   }
+
+  /* Two slots holding two DIFFERENT files under one name would put two entries
+     at the same path in the pack, and unzip keeps only the last. Picking
+     renames to avoid it; this catches the case where an imported theme.json
+     already named the same file twice and both have since been re-picked. */
+  const withBytes = ASSET_SLOTS
+    .filter(s => state[s.key].name && state[s.key].dataUrl);
+  withBytes.forEach((s, i) => {
+    const clash = withBytes.slice(i + 1).find(o =>
+      o.name !== s.name &&
+      state[o.key].name.toLowerCase() === state[s.key].name.toLowerCase() &&
+      state[o.key].dataUrl !== state[s.key].dataUrl);
+    if (clash){
+      err(`${s.key} and ${clash.key} are different files both named ` +
+          `"${state[s.key].name}" - re-pick one so the pack cannot lose it.`);
+    }
+  });
 
   /* Does this theme change anything at all? */
   if (!changedRoles().length && !state.bg.dataUrl && !state.font.name &&
@@ -1126,11 +1191,15 @@ function exportPack(){
     path: dir + 'theme.json',
     bytes: enc.encode(JSON.stringify(buildTheme(), null, 2) + '\n')
   }];
-  [['bg'],['anim'],['font'],['mascot'],['bgm']].forEach(([k]) => {
-    const a = state[k];
-    if (a && a.name && a.dataUrl){
-      entries.push({path: dir + a.name, bytes: dataUrlToBytes(a.dataUrl)});
-    }
+  /* Last line of defence on top of uniqueAssetName: a zip must never carry two
+     entries at one path, because extraction silently keeps only the last. */
+  const used = new Set(['theme.json'.toLowerCase()]);
+  ASSET_SLOTS.forEach(({key}) => {
+    const a = state[key];
+    if (!a || !a.name || !a.dataUrl) return;
+    if (used.has(a.name.toLowerCase())) return;   /* same file already packed */
+    used.add(a.name.toLowerCase());
+    entries.push({path: dir + a.name, bytes: dataUrlToBytes(a.dataUrl)});
   });
   download(makeZip(entries), folderName() + '.zip');
 }
@@ -1308,10 +1377,24 @@ function render(opts){
 }
 
 /* Work in progress survives a reload. Wrapped because storage can be blocked
-   or full, and an editor that throws on load is worse than one that forgets. */
+   or full, and an editor that throws on load is worse than one that forgets.
+
+   Asset BYTES are deliberately not persisted - only the file names. A font and
+   a music track are easily several MB, and base64 inflates them by a third:
+   past the ~5 MB localStorage quota every save throws, so the whole payload is
+   silently dropped and each keystroke wastes a multi-megabyte serialise on a
+   write that cannot succeed. Names alone always fit, and a name without bytes
+   already renders as "(named, file not loaded)", which tells the author
+   exactly what to re-pick. */
 const LS_KEY = 'romm-theme-editor-v1';
 function save(){
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+  try {
+    const slim = JSON.parse(JSON.stringify(state));
+    ['bg','anim','font','mascot','bgm'].forEach(k => {
+      if (slim[k]) slim[k].dataUrl = '';
+    });
+    localStorage.setItem(LS_KEY, JSON.stringify(slim));
+  } catch (e) {}
 }
 function load(){
   try {
@@ -1338,7 +1421,7 @@ function wireAsset(inputId, clearId, key, after){
     const f = ev.target.files && ev.target.files[0];
     if (!f) return;
     readAsDataUrl(f, url => {
-      state[key].name = safeName(f.name);
+      state[key].name = uniqueAssetName(key, safeName(f.name));
       state[key].dataUrl = url;
       if (after) after();
       render();
