@@ -1,11 +1,17 @@
 {
-  "name": "aramaki-tinfoil-theme-editor",
-  "productName": "Aramaki's Tinfoil Theme Editor",
+  "name": "aramaki-theme-editors",
+  "productName": "Aramaki's Theme Editors",
   "version": "2.0.1",
-  "description": "Visual editor for Tinfoil theme files (settings.json)",
+  "description": "Visual editors for Tinfoil (settings.json) and RomM Switch client (theme.json) themes",
   "main": "main.js",
   "author": "Aramaki",
   "devDependencies": {
-    "electron-packager": "^17.1.2"
+    "@electron/packager": "^20.3.0",
+    "electron": "^44.3.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "package:win": "electron-packager . --platform=win32 --arch=x64 --out=dist --overwrite",
+    "package:linux": "electron-packager . --platform=linux --arch=x64 --out=dist --overwrite"
   }
 }

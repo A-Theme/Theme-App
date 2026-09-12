@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1420">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Aramaki's theme editors for Tinfoil and the RomM Switch client.">
+
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+
+<!-- No manifest here on purpose: each editor carries its own (manifest.json
+     and manifest-romm.json) so they install as separate apps. This page is
+     the desktop app's entry point and a plain landing page on the web. -->
+
+<title>Aramaki's Theme Editors</title>
+<style>
+  :root{
+    --bg-0:#0b1420;
+    --bg-1:#101d2e;
+    --bg-2:#16263a;
+    --line:#22354d;
+    --text-0:#eaf1fa;
+    --text-1:#9db2c9;
+    --text-2:#5f7a94;
+    --joy-red:#ff3c50;
+    --joy-blue:#00c2ff;
+    --grape:#9d4edd;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg-0);color:var(--text-0);font-family:var(--sans);}
+  body{min-height:100vh;display:flex;flex-direction:column;}
+  .wrap{max-width:980px;margin:0 auto;padding:48px 20px 40px;flex:1;width:100%;}
+
+  .head{text-align:center;margin-bottom:40px;}
+  .head .mark{width:72px;height:72px;border-radius:16px;margin:0 auto 18px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;background:var(--bg-2);
+    border:1px solid var(--line);}
+  .head .mark img{width:100%;height:100%;object-fit:cover;}
+  .head h1{font-size:27px;margin:0 0 8px;letter-spacing:.2px;}
+  .head p{margin:0;font-size:14.5px;color:var(--text-2);}
+
+  .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;}
+  @media (max-width:740px){ .cards{grid-template-columns:minmax(0,1fr);} }
+
+  .card{
+    display:flex;flex-direction:column;
+    background:var(--bg-1);border:1px solid var(--line);border-radius:14px;
+    padding:24px;text-decoration:none;color:inherit;
+    transition:border-color .16s, transform .16s, background .16s;
+  }
+  .card:hover,.card:focus-visible{
+    border-color:var(--accent-c);transform:translateY(-2px);background:var(--bg-2);
+  }
+  .card:focus-visible{outline:2px solid var(--accent-c);outline-offset:3px;}
+  .card .top{display:flex;align-items:center;gap:11px;margin-bottom:14px;}
+  .card .dot{width:11px;height:11px;border-radius:50%;flex:none;background:var(--accent-c);}
+  .card h2{font-size:18px;margin:0;}
+  .card .sub{font-size:12.5px;color:var(--text-2);font-family:var(--mono);margin:2px 0 0;}
+  .card p{font-size:13.5px;color:var(--text-1);line-height:1.55;margin:0 0 16px;}
+  .card ul{margin:0 0 18px;padding-left:18px;font-size:13px;color:var(--text-1);line-height:1.7;}
+  .card .go{
+    margin-top:auto;font-size:13.5px;font-weight:600;color:var(--accent-c);
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .tinfoil{--accent-c:var(--joy-red);}
+  .romm{--accent-c:var(--joy-blue);}
+
+  .foot{border-top:1px solid var(--line);padding:22px 20px 30px;text-align:center;
+    font-size:12.5px;color:var(--text-2);line-height:1.7;}
+  .foot a{color:var(--joy-blue);}
+  .foot .links{margin-top:6px;}
+  .foot .links a{margin:0 8px;}
+  code{font-family:var(--mono);font-size:.92em;color:var(--text-1);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div class="mark"><img src="assets/logo.png" alt="" onerror="this.parentNode.textContent='A'"></div>
+      <h1>Aramaki's Theme Editors</h1>
+      <p>Two editors, two targets. Pick one.</p>
+    </div>
+
+    <div class="cards">
+
+      <a class="card tinfoil" href="tinfoil-theme-editor.html">
+        <div class="top">
+          <span class="dot"></span>
+          <div>
+            <h2>Tinfoil Theme Editor</h2>
+            <p class="sub">settings.json</p>
+          </div>
+        </div>
+        <p>For <strong>Tinfoil</strong>, the Switch shop app. Edit every field
+           through a proper UI instead of hand-writing raw JSON.</p>
+        <ul>
+          <li>Live Switch UI preview</li>
+          <li>Pull a palette from a wallpaper</li>
+          <li>Export a ready-to-use <code>.zip</code></li>
+        </ul>
+        <span class="go">Open editor &rarr;</span>
+      </a>
+
+      <a class="card romm" href="romm-theme-editor.html">
+        <div class="top">
+          <span class="dot"></span>
+          <div>
+            <h2>RomM Theme Editor</h2>
+            <p class="sub">theme.json</p>
+          </div>
+        </div>
+        <p>For the <strong>RomM Switch client</strong>. Recolour it, give it a
+           background, its own font, mascot art and music.</p>
+        <ul>
+          <li>19 colour roles with readability checks</li>
+          <li>Backgrounds, motion and animation</li>
+          <li>Export a drop-in theme pack</li>
+        </ul>
+        <span class="go">Open editor &rarr;</span>
+      </a>
+
+    </div>
+  </div>
+
+  <div class="foot">
+    Everything runs locally &mdash; nothing you open is uploaded anywhere.
+    <div class="links">
+      <a href="https://github.com/A-Theme/Tinfoil-Themes">Tinfoil themes</a>&middot;
+      <a href="https://github.com/A-Theme/RomM-Themes">RomM themes</a>&middot;
+      <a href="https://github.com/A-Theme">A-Theme</a>
+    </div>
+  </div>
+</body>
+</html>

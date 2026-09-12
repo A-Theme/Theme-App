@@ -7,8 +7,9 @@
 // Switch client editor install as separate apps from the same origin, and
 // either one being open is enough to cache both.
 
-const CACHE_NAME = 'aramaki-theme-editors-v2';
+const CACHE_NAME = 'aramaki-theme-editors-v3';
 const ASSETS = [
+  './index.html',
   './tinfoil-theme-editor.html',
   './manifest.json',
   './romm-theme-editor.html',

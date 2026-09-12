@@ -1,0 +1,12 @@
+# Electron build output and deps
+node_modules/
+dist/
+
+# Local credential/config files - never commit
+.env
+.env.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
