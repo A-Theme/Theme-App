@@ -256,6 +256,47 @@ It's had real hardware testing and several rounds of fixes already. What it can 
 
 ---
 
+## 🎨 Also here: the RomM Theme Editor
+
+This repo now hosts a **second** editor: [`romm-theme-editor.html`](romm-theme-editor.html),
+for theming the **RomM Switch client** rather than Tinfoil. Same idea, same house
+style, separate file — and it installs as its own app (its own
+[`manifest-romm.json`](manifest-romm.json)), so both editors can live side by side
+on your home screen.
+
+A RomM theme is a folder with a `theme.json` in it, and can change a lot more than
+a Tinfoil theme:
+
+| | |
+|---|---|
+| **19 colour roles** | semantic, not raw slots — `bg`, `surface_raised`, `accent`, `focus_ring`, `danger`… |
+| **Background** | a 1280×720 image with a `dim` control, plus free `drift`/`pan`/`zoom` motion |
+| **Animated background** | sprite sheets (cheap — one texture) or animated GIF, inside a 48 MB texture budget |
+| **Font** | a `.ttf`/`.otf` replacing the UI face at all five sizes |
+| **Mascot** | swap the Borb art |
+| **Music** | MP3, OGG, Opus, FLAC, and tracker modules (`.mod`/`.xm`/`.it`/`.s3m`) |
+
+What the editor does for you:
+
+- **Live preview of the real screens** — library, detail and a dialog, drawn at the
+  console's actual 1280×720 with true relative type sizes. It stays pinned while
+  you scroll the colour list.
+- **Readability checks** — WCAG contrast for body text on all three surfaces, and a
+  hard warning when `focus_ring` blends into the card it outlines. A cursor nobody
+  can see is the single easiest way to ruin a theme.
+- **A live memory budget** — one 720p frame is 3.6 MB of texture, so an animated
+  background is budgeted. The meter shows exactly what your settings cost and
+  refuses what the client would refuse.
+- **Import** an existing `theme.json`, **export** the JSON, or **export a ready-to-drop
+  `.zip` pack** with every asset in it.
+
+Drop the unzipped folder into `sdmc:/switch/romm-client/themes/` and pick it in
+**Settings → Theme** on the console. Themes live in
+[**RomM-Themes**](https://github.com/A-Theme/RomM-Themes), which validates every
+submission against the same rules the client enforces.
+
+---
+
 ## 📜 License
 
 MIT — do whatever you'd like with it.
@@ -269,6 +310,7 @@ MIT — do whatever you'd like with it.
 [![Theme-App](https://img.shields.io/badge/Theme--App-visual%20editor-00c2ff?style=for-the-badge)](https://github.com/A-Theme/Theme-App)
 [![Tinfoil-Themes](https://img.shields.io/badge/Tinfoil--Themes-theme%20database-ff3c50?style=for-the-badge)](https://github.com/A-Theme/Tinfoil-Themes)
 [![Switch-Theme-Installer](https://img.shields.io/badge/Switch--Theme--Installer-on--console%20installer-9d4edd?style=for-the-badge)](https://github.com/A-Theme/Switch-Theme-Installer)
+[![RomM-Themes](https://img.shields.io/badge/RomM--Themes-romm%20theme%20database-5be27a?style=for-the-badge)](https://github.com/A-Theme/RomM-Themes)
 
 [![A-Theme](https://img.shields.io/badge/A--Theme-org-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/A-Theme)
 [![Website](https://img.shields.io/badge/Web-a--theme.ca-e60012?style=for-the-badge&logo=googlechrome&logoColor=white)](https://a-theme.ca)

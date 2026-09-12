@@ -1,12 +1,19 @@
-// Minimal offline cache for Aramaki's Tinfoil Theme Editor.
-// The app itself is a single self-contained HTML file (all CSS/JS inlined),
-// so this just needs to cache that one file plus the PWA icons/manifest —
-// there's no separate build output to track.
+// Minimal offline cache for Aramaki's theme editors.
+// Each app is a single self-contained HTML file (all CSS/JS inlined), so this
+// just needs to cache those files plus the PWA icons/manifests — there's no
+// separate build output to track.
+//
+// Two editors, two manifests, one scope: the Tinfoil editor and the RomM
+// Switch client editor install as separate apps from the same origin, and
+// either one being open is enough to cache both.
 
-const CACHE_NAME = 'tinfoil-theme-editor-v1';
+const CACHE_NAME = 'aramaki-theme-editors-v2';
 const ASSETS = [
   './tinfoil-theme-editor.html',
   './manifest.json',
+  './romm-theme-editor.html',
+  './manifest-romm.json',
+  './assets/logo.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-512-maskable.png'
