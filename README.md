@@ -308,17 +308,35 @@ a Tinfoil theme:
 
 What the editor does for you:
 
+- **Browse the published catalog** — it reads the same `manifest.json` the console
+  reads and lists every theme in
+  [RomM-Themes](https://github.com/A-Theme/RomM-Themes), with what each one changes.
+  Opening one pulls its background, font, mascot and music down too, so the quickest
+  way to start a new theme is usually to open the nearest existing one and change it.
 - **Live preview of the real screens** — library, detail and a dialog, drawn at the
   console's actual 1280×720 with true relative type sizes. It stays pinned while
   you scroll the colour list.
+- **Motion and animation that actually play.** `drift`, `pan` and `zoom` move, sprite
+  sheets step through their frames, and moving a slider retunes it live. The
+  arithmetic is a port of the client's own `theme_motion.cpp` — same triangle wave,
+  same easing, same grow-before-translate — because a preview running its own
+  approximation would be worse than none, looking authoritative while being wrong.
+  [`tests/check-motion.mjs`](tests/check-motion.mjs) holds it to that: 6336 inputs
+  through both implementations, byte-identical output required.
+- **20 starting palettes**, each setting all 19 roles and contrast-checked before
+  it ships, so a palette is a safe base rather than a swatch dump you then have to
+  make legible.
 - **Readability checks** — WCAG contrast for body text on all three surfaces, and a
   hard warning when `focus_ring` blends into the card it outlines. A cursor nobody
   can see is the single easiest way to ruin a theme.
 - **A live memory budget** — one 720p frame is 3.6 MB of texture, so an animated
-  background is budgeted. The meter shows exactly what your settings cost and
-  refuses what the client would refuse.
-- **Import** an existing `theme.json`, **export** the JSON, or **export a ready-to-drop
-  `.zip` pack** with every asset in it.
+  background is budgeted. The meter shows exactly what your settings cost, and an
+  animation over budget falls back to the still image in the preview, because that
+  is what the client does with it.
+- **Import a folder, a `.zip` pack, or a bare `theme.json`**; **export** the JSON or
+  a ready-to-drop `.zip` pack with every asset in it. Prefer the folder or the pack:
+  a `theme.json` only *names* its background, so importing one on its own gives you
+  colours and five dangling references.
 
 Drop the unzipped folder into `sdmc:/switch/romm-client/themes/` and pick it in
 **Settings → Theme** on the console. Themes live in
