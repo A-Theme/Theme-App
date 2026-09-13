@@ -145,7 +145,8 @@
 
   /* Mock of the client UI. Every one of the 19 roles appears somewhere here,
      so a change is always visible somewhere in the preview. */
-  .sbg{position:absolute;inset:0;background-size:cover;background-position:center;}
+  .sbg{position:absolute;inset:0;background-size:100% 100%;background-position:0 0;
+    background-repeat:no-repeat;transform-origin:0 0;will-change:transform;}
   .sdim{position:absolute;inset:0;}
   .slayer{position:absolute;inset:0;padding:40px 64px;}   /* title-safe inset */
 
@@ -381,7 +382,9 @@
     <div class="preview-col">
       <div class="panel preview-panel">
         <h2>Preview
+          <span class="note" id="motionInfo"></span>
           <span class="tabs">
+            <button id="motionPlay" title="Motion and animation play here exactly as the client computes them">Pause motion</button>
             <button data-screen="library" class="on">Library</button>
             <button data-screen="detail">Detail</button>
             <button data-screen="modal">Dialog</button>
@@ -973,21 +976,18 @@ function renderPreview(){
   const s = $('screen');
   s.style.background = c('bg');
 
+  /* What the console would actually draw behind the UI: an animation when the
+     theme has one, otherwise the still image. */
+  const bgSrc = animationInUse() ? state.anim.dataUrl : state.bg.dataUrl;
+
+  /* The background layer is kept OUT of the innerHTML rebuild below. Rebuilding
+     it every render would restart a playing GIF and re-decode a multi-megabyte
+     data URL on every slider step, so it is detached and put back instead. */
+  if (sbgEl && sbgEl.parentNode) sbgEl.parentNode.removeChild(sbgEl);
+
   let inner = '';
-  if (state.bg.dataUrl){
-    /* Motion is previewed as a static offset - enough to show the framing a
-       moving background will use, without a distracting animation here. */
-    let extra = '';
-    if (state.motion.kind === 'zoom'){
-      extra = `transform:scale(${1 + Math.min(state.motion.amount,100)/100*0.5});`;
-    } else if (state.motion.kind === 'drift' || state.motion.kind === 'pan'){
-      const a = state.motion.amount;
-      extra = `transform:translate(${-a/2}px,${state.motion.kind==='drift' ? -a/2 : 0}px) scale(${1 + a/1280 + 0.02});`;
-    }
-    inner += `<div class="sbg" style="background-image:url('${state.bg.dataUrl}');${extra}"></div>`;
-    if (state.bg.dim > 0){
-      inner += `<div class="sdim" style="background:rgba(0,0,0,${state.bg.dim})"></div>`;
-    }
+  if (bgSrc && state.bg.dim > 0){
+    inner += `<div class="sdim" style="background:rgba(0,0,0,${state.bg.dim})"></div>`;
   }
 
   let body = state.screen === 'detail' ? detailScreen()
@@ -995,6 +995,26 @@ function renderPreview(){
            : libraryScreen();
   inner += `<div class="slayer">${body}</div>`;
   s.innerHTML = inner;
+
+  if (bgSrc){
+    if (!sbgEl){
+      sbgEl = document.createElement('div');
+      sbgEl.className = 'sbg';
+    }
+    if (sbgEl._src !== bgSrc){
+      /* The URL is held on the node as a property, never as an attribute - a
+         background can be several megabytes of base64 and it has no business
+         in the DOM twice. */
+      sbgEl.style.backgroundImage = `url("${bgSrc}")`;
+      sbgEl._src = bgSrc;
+    }
+    s.insertBefore(sbgEl, s.firstChild);   // under .sdim and .slayer
+    applyMotionFrame(motionClockMs);       // paint now, do not wait for a frame
+  } else {
+    sbgEl = null;
+    setMotionReadout(-1);
+  }
+  syncMotionLoop();
 
   /* Mascot, where the client draws its own. */
   if (state.mascot.dataUrl && state.screen !== 'detail'){
@@ -1016,6 +1036,272 @@ function scalePreview(){
   if (w > 0) $('screen').style.transform = 'scale(' + (w / 1280) + ')';
 }
 window.addEventListener('resize', scalePreview);
+
+/* ---------------------------------------------------------------------------
+   Live background motion
+
+   A direct port of source/ui/theme_motion.cpp. Not "something that looks like
+   drift" - the same triangle wave, the same easing, the same 24-second base
+   period, the same growth-before-translation. The point of previewing motion
+   is to know what the console will do, and a preview running its own
+   approximation would be worse than no preview at all, because it would look
+   authoritative while being wrong.
+
+   The invariant carried over with it: motion grows the image by the full travel
+   distance BEFORE moving it, so a drifting background can never uncover a strip
+   of bare colour at a screen edge.
+   --------------------------------------------------------------------------- */
+const BG_SCREEN_W = 1280, BG_SCREEN_H = 720;
+
+/* The client does this arithmetic in 32-bit float. JavaScript has only
+   doubles, so every step is rounded back through Math.fround - otherwise the
+   extra precision drifts the result a whole pixel away from the console's at
+   some timestamps, which a differential test against theme_motion.cpp catches
+   immediately. The pi below is the client's own `3.14159265f` literal, not
+   Math.PI, for the same reason. */
+const f32  = Math.fround;
+const PI_F = f32(3.14159265);
+const MOTION_BASE_PERIOD_MS = f32(24000);   /* kBasePeriodMs */
+
+/* C++ integer division truncates toward zero; Math.floor does not, and the
+   difference shows up on every odd-sized placement. */
+const idiv   = (a, b) => Math.trunc(a / b);
+/* std::lround rounds half away from zero; Math.round rounds half toward +inf. */
+const lround = v => Math.sign(v) * Math.round(Math.abs(v));
+const clampi = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function phaseOf(ms, speed){
+  const period = f32(MOTION_BASE_PERIOD_MS / Math.max(f32(speed), f32(0.1)));
+  /* fmod of two floats is exact, so no rounding is needed on the remainder. */
+  const t = f32(ms) % period;
+  return f32(t / period);
+}
+/** Triangle wave 0..1..0, so a cycle returns exactly where it began. */
+const triangleWave = p => (p < 0.5 ? f32(p * 2) : f32(f32(1 - p) * 2));
+/** Cosine ease, so the turn-around is not a visible corner. */
+const easedTriangle = p => f32(0.5 - f32(0.5 * f32(Math.cos(f32(triangleWave(p) * PI_F)))));
+
+/** Where the background goes this frame, in 1280x720 screen pixels. */
+function backgroundPlacement(motion, ms){
+  const full = {x:0, y:0, w:BG_SCREEN_W, h:BG_SCREEN_H};
+  if (!motion || motion.kind === 'none') return full;
+
+  const amount = clampi(motion.amount, 0, 256);
+  if (amount === 0) return full;
+
+  const phase = phaseOf(ms, motion.speed);
+
+  if (motion.kind === 'zoom'){
+    /* Breathes between 1.0 and 1.0+amount%, centre-anchored. The minimum is
+       exactly 1.0 so the image can never shrink inside the screen. */
+    const extra = f32(f32(amount / 256) * f32(0.35));
+    const scale = f32(1 + f32(extra * easedTriangle(phase)));
+    const w = Math.ceil(f32(BG_SCREEN_W * scale));
+    const h = Math.ceil(f32(BG_SCREEN_H * scale));
+    return {x: idiv(BG_SCREEN_W - w, 2), y: idiv(BG_SCREEN_H - h, 2), w, h};
+  }
+
+  const travelX = amount;
+  const travelY = (motion.kind === 'drift') ? amount : 0;
+
+  const w = BG_SCREEN_W + travelX * 2;
+  const h = BG_SCREEN_H + travelY * 2;
+  const baseX = idiv(BG_SCREEN_W - w, 2);
+  const baseY = idiv(BG_SCREEN_H - h, 2);
+
+  const t = f32(f32(easedTriangle(phase) * 2) - 1);   // -1 .. 1
+  return {x: baseX + lround(f32(t * travelX)),
+          y: baseY + lround(f32(t * travelY)), w, h};
+}
+
+/** Which frame is showing at `ms`. Loops wrap; non-loops hold the last frame. */
+function animationFrame(anim, ms){
+  if (!anim || anim.kind === 'none') return 0;
+  const frames = anim.frames;
+  if (!(frames > 0)) return 0;
+  const fps = clampi(anim.fps, 1, MAX_ANIMATION_FPS);
+  const elapsed = Math.floor(ms * fps / 1000);
+  if (!anim.loop) return elapsed >= frames ? frames - 1 : elapsed;
+  return elapsed % frames;
+}
+
+/** How many frames the sheet really holds at its declared frame size. */
+function sheetCapacity(anim, sheetW, sheetH){
+  if (!(anim.fw > 0) || !(anim.fh > 0)) return 0;
+  if (!(sheetW > 0) || !(sheetH > 0)) return 0;
+  const cols = idiv(sheetW, anim.fw), rows = idiv(sheetH, anim.fh);
+  if (cols <= 0 || rows <= 0) return 0;
+  return cols * rows;
+}
+
+/** Source rect of `frame` in the sheet, left-to-right then top-to-bottom. */
+function sheetSource(anim, frame, sheetW, sheetH){
+  const none = {x:0, y:0, w:0, h:0};
+  if (frame < 0 || !(anim.fw > 0) || !(anim.fh > 0)) return none;
+  const cols = sheetW > 0 ? idiv(sheetW, anim.fw) : 0;
+  if (cols <= 0) return none;
+  if (frame >= sheetCapacity(anim, sheetW, sheetH)) return none;
+  return {x:(frame % cols) * anim.fw, y:idiv(frame, cols) * anim.fh,
+          w:anim.fw, h:anim.fh};
+}
+
+/* ---- the loop -------------------------------------------------------------
+   The background lives in its own element that survives a re-render, so
+   dragging the speed slider retunes the motion instead of restarting it (and
+   does not restart a playing GIF). Only that element's transform is touched
+   per frame - the rest of the mock is not rebuilt at 60fps. */
+let sbgEl = null;             // the persistent .sbg node
+let motionClockMs = 0;        // our own clock, so pause and restart work
+let motionLastTs  = 0;
+let motionRaf     = 0;
+let motionPlaying = true;
+
+/**
+ * Would the CLIENT actually play this animation?
+ *
+ * It refuses one that busts the texture budget or the frame cap and falls back
+ * to the still image, so the preview has to do the same - showing frames the
+ * console will never draw is exactly the kind of confident lie a preview must
+ * not tell. Declared here rather than inline because renderPreview (which
+ * picks the image) and applyMotionFrame (which slices it) must never disagree.
+ */
+function animationInUse(){
+  if (state.anim.kind === 'none' || !state.anim.dataUrl) return false;
+  if (!(state.anim.frames > 0) || state.anim.frames > MAX_ANIMATION_FRAMES) return false;
+  if (animBytes() > MAX_ANIMATION_BYTES) return false;
+  if (state.anim.kind === 'sheet' && !(state.anim.fw > 0 && state.anim.fh > 0)) return false;
+  return true;
+}
+
+/** Is there anything for the rAF loop to do? A GIF animates on its own. */
+function motionNeedsLoop(){
+  if (!sbgEl) return false;
+  if (state.motion.kind !== 'none' && state.motion.amount > 0) return true;
+  return animationInUse() && state.anim.kind === 'sheet';
+}
+
+function applyMotionFrame(ms){
+  if (!sbgEl) return;
+
+  const p = backgroundPlacement(state.motion, ms);
+  /* transform-origin is the top-left corner, so this maps the element's own
+     1280x720 box exactly onto the placement rect - and it composites on the
+     GPU, unlike animating left/top/width/height. */
+  sbgEl.style.transform =
+    `translate(${p.x}px, ${p.y}px) scale(${p.w / BG_SCREEN_W}, ${p.h / BG_SCREEN_H})`;
+
+  if (state.anim.kind === 'sheet' && animationInUse() && state.anim.natW > 0){
+    const frame = animationFrame(state.anim, ms);
+    const r = sheetSource(state.anim, frame, state.anim.natW, state.anim.natH);
+    if (r.w > 0){
+      /* Blow the sheet up so ONE cell fills the element, then slide the right
+         cell into view - the CSS equivalent of drawing a source rect. */
+      const kx = BG_SCREEN_W / r.w, ky = BG_SCREEN_H / r.h;
+      sbgEl.style.backgroundSize =
+        `${(state.anim.natW * kx).toFixed(2)}px ${(state.anim.natH * ky).toFixed(2)}px`;
+      sbgEl.style.backgroundPosition =
+        `${(-r.x * kx).toFixed(2)}px ${(-r.y * ky).toFixed(2)}px`;
+      sbgEl.style.backgroundRepeat = 'no-repeat';
+    }
+    setMotionReadout(frame);
+  } else {
+    /* The client stretches the image into the destination rect, so the preview
+       does too - "cover" would crop instead and quietly hide a background
+       authored at the wrong aspect ratio. */
+    sbgEl.style.backgroundSize = '100% 100%';
+    sbgEl.style.backgroundPosition = '0 0';
+    setMotionReadout(-1);
+  }
+}
+
+let lastReadout = null;
+function setMotionReadout(frame){
+  const el = $('motionInfo');
+  if (!el) return;
+  let txt = '';
+  if (state.anim.kind === 'sheet' && frame >= 0){
+    txt = `frame ${frame + 1}/${state.anim.frames} · ${state.anim.fps} fps`;
+  } else if (state.anim.kind === 'gif' && animationInUse()){
+    txt = 'gif plays at its own embedded rate here';
+  } else if (state.anim.kind !== 'none' && state.anim.dataUrl && !animationInUse()){
+    txt = 'animation refused — showing the still image, as the client would';
+  } else if (state.motion.kind !== 'none' && state.motion.amount > 0){
+    const secs = (MOTION_BASE_PERIOD_MS / Math.max(state.motion.speed, 0.1) / 1000);
+    txt = `${state.motion.kind} · ${secs.toFixed(1)}s cycle · ${state.motion.amount}px`;
+  }
+  if (txt !== lastReadout){ el.textContent = txt; lastReadout = txt; }
+}
+
+function motionTick(ts){
+  motionRaf = requestAnimationFrame(motionTick);
+  if (motionPlaying && motionLastTs){
+    /* Cap the step so returning to a backgrounded tab does not jump the
+       animation forward by however long it was hidden. */
+    motionClockMs += Math.min(ts - motionLastTs, 100);
+  }
+  motionLastTs = ts;
+  applyMotionFrame(motionClockMs);
+}
+
+function startMotionLoop(){
+  if (motionRaf) return;
+  motionLastTs = 0;
+  motionRaf = requestAnimationFrame(motionTick);
+}
+
+function stopMotionLoop(){
+  if (!motionRaf) return;
+  cancelAnimationFrame(motionRaf);
+  motionRaf = 0;
+  motionLastTs = 0;
+}
+
+/* A still theme should not hold a 60fps callback open for the life of the tab,
+   so the loop runs only while something is actually moving. */
+function syncMotionLoop(){
+  if (motionPlaying && motionNeedsLoop()) startMotionLoop();
+  else stopMotionLoop();
+}
+
+function setMotionPlaying(on){
+  motionPlaying = on;
+  const b = $('motionPlay');
+  if (b) b.textContent = on ? 'Pause motion' : 'Play motion';
+  syncMotionLoop();
+  if (!on) applyMotionFrame(motionClockMs);
+}
+
+/* Measure what was actually loaded, so the sheet can be sliced correctly and
+   so a mismatch between the file and what theme.json claims is a finding
+   rather than a surprise on the console. */
+let measuredBgUrl = '', measuredAnimUrl = '';
+function measureAssets(){
+  const measure = (slot, urlNow, remember) => {
+    state[slot].natW = state[slot].natW || 0;
+    state[slot].natH = state[slot].natH || 0;
+    if (!urlNow){ state[slot].natW = state[slot].natH = 0; return; }
+    const img = new Image();
+    img.onload = () => {
+      if (state[slot].dataUrl !== urlNow) return;   // superseded while loading
+      state[slot].natW = img.naturalWidth;
+      state[slot].natH = img.naturalHeight;
+      renderChecks();
+    };
+    img.onerror = () => { state[slot].natW = state[slot].natH = 0; };
+    img.src = urlNow;
+    remember(urlNow);
+  };
+  if (state.bg.dataUrl !== measuredBgUrl){
+    state.bg.natW = state.bg.natH = 0;
+    measure('bg', state.bg.dataUrl, u => { measuredBgUrl = u; });
+    measuredBgUrl = state.bg.dataUrl;
+  }
+  if (state.anim.dataUrl !== measuredAnimUrl){
+    state.anim.natW = state.anim.natH = 0;
+    measure('anim', state.anim.dataUrl, u => { measuredAnimUrl = u; });
+    measuredAnimUrl = state.anim.dataUrl;
+  }
+}
 
 /* ---------------------------------------------------------------------------
    Checks - the same rules the repo validator and the client apply, plus
@@ -1090,6 +1376,25 @@ function renderChecks(){
   if (!state.bg.name && state.motion.kind !== 'none'){
     warn(`Motion "${state.motion.kind}" is set but there is no background image to move.`);
   }
+  if (state.motion.kind !== 'none' && state.motion.amount === 0){
+    warn(`Motion "${state.motion.kind}" travels 0px, so nothing will move. Raise the amount.`);
+  }
+  /* These need the actual bytes, which is why importing a whole folder rather
+     than a lone theme.json is worth doing. */
+  if (state.bg.natW > 0 && (state.bg.natW !== 1280 || state.bg.natH !== 720)){
+    warn(`The background is ${state.bg.natW}x${state.bg.natH}. The Switch framebuffer is ` +
+         `1280x720 in both handheld and docked and the client stretches to fit, so this ` +
+         `is resampled` +
+         (Math.abs(state.bg.natW / state.bg.natH - 16/9) > 0.01 ? ' and distorted.' : '.'));
+  }
+  if ((state.motion.kind === 'drift' || state.motion.kind === 'pan') &&
+      state.motion.amount > 0 && state.bg.natW > 0){
+    const g = state.motion.amount * 2;
+    out.push({k:'info', m:`"${state.motion.kind}" enlarges the background to ` +
+      `${1280 + g}x${state.motion.kind === 'drift' ? 720 + g : 720} so it can move without ` +
+      `uncovering a screen edge. The edges are cropped - keep anything important ` +
+      `${state.motion.amount}px inside them.`});
+  }
 
   /* Animation */
   if (state.anim.kind !== 'none'){
@@ -1117,6 +1422,32 @@ function renderChecks(){
     if (!state.bg.name){
       warn('An animated theme should also ship a still background image - it is the fallback ' +
            'when the animation cannot be used.');
+    }
+    /* The sheet on disk versus what theme.json claims about it. The client
+       refuses to sample past a sheet's edge, so a mismatch here means frames
+       that silently never draw. */
+    if (state.anim.kind === 'sheet' && state.anim.natW > 0 &&
+        state.anim.fw > 0 && state.anim.fh > 0){
+      const cap  = sheetCapacity(state.anim, state.anim.natW, state.anim.natH);
+      const cols = Math.trunc(state.anim.natW / state.anim.fw);
+      const rows = Math.trunc(state.anim.natH / state.anim.fh);
+      if (cap === 0){
+        err(`The sheet is ${state.anim.natW}x${state.anim.natH}, smaller than one ` +
+            `${state.anim.fw}x${state.anim.fh} frame - nothing will play.`);
+      } else if (state.anim.frames > cap){
+        err(`theme.json says ${state.anim.frames} frames but the sheet is ` +
+            `${state.anim.natW}x${state.anim.natH}, which holds ${cap} (${cols}x${rows}). ` +
+            `Frames past ${cap} will not draw.`);
+      } else {
+        if (state.anim.natW % state.anim.fw || state.anim.natH % state.anim.fh){
+          warn(`The sheet is ${state.anim.natW}x${state.anim.natH}, not a whole number of ` +
+               `${state.anim.fw}x${state.anim.fh} frames. The leftover strip is ignored.`);
+        }
+        if (state.anim.frames < cap){
+          out.push({k:'info', m:`The sheet holds ${cap} frames (${cols}x${rows}); ` +
+            `theme.json uses ${state.anim.frames}.`});
+        }
+      }
     }
   }
 
@@ -2112,6 +2443,7 @@ function applyPreviewFont(){
 }
 
 function render(opts){
+  measureAssets();
   renderAssetLabels();
   syncColorInputs(opts && opts.skipHex);
   renderPreview();
@@ -2300,8 +2632,16 @@ function init(){
     });
   });
 
+  $('motionPlay').addEventListener('click', () => setMotionPlaying(!motionPlaying));
+  /* Someone who has asked their OS for less motion should not be ambushed by a
+     drifting background. The button is still there to start it. */
+  if (window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    setMotionPlaying(false);
+  }
+
   applyPreviewFont();
-  render();
+  render();          // render() ends in syncMotionLoop(), which starts the loop
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:'){
     navigator.serviceWorker.register('sw.js').catch(() => {});
