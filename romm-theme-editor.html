@@ -202,6 +202,36 @@
   .chk input{accent-color:var(--joy-blue);}
   .assetname{font-size:12px;color:var(--text-1);font-family:var(--mono);word-break:break-all;}
   a{color:var(--joy-blue);}
+  /* ---- catalog browser ------------------------------------------------- */
+  .cat-back{position:fixed;inset:0;z-index:60;background:rgba(3,8,14,.8);
+    display:flex;align-items:flex-start;justify-content:center;padding:34px 16px;overflow:auto;}
+  .cat-back[hidden]{display:none;}
+  .cat{background:var(--bg-1);border:1px solid var(--line);border-radius:14px;
+    width:100%;max-width:860px;box-shadow:0 26px 70px rgba(0,0,0,.62);overflow:hidden;}
+  .cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    padding:15px 18px;border-bottom:1px solid var(--line);background:var(--bg-2);}
+  .cat-head h3{margin:0;font-size:15px;}
+  .cat-head p{margin:3px 0 0;font-size:12px;color:var(--text-2);}
+  .cat-head p a{color:var(--joy-blue);}
+  .cat-tools{padding:12px 18px 0;display:flex;gap:8px;align-items:center;}
+  .cat-tools input[type=search]{flex:1;background:var(--bg-0);border:1px solid var(--line);
+    color:var(--text-0);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);}
+  .cat-tools input[type=search]:focus{outline:none;border-color:var(--joy-blue);}
+  .cat-body{padding:12px 18px 18px;max-height:64vh;overflow:auto;}
+  .cat-row{display:flex;align-items:center;gap:13px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:10px;background:var(--bg-2);margin-bottom:9px;}
+  .cat-row.busy{opacity:.55;}
+  .cat-sw{flex:none;width:54px;height:54px;border-radius:8px;border:1px solid var(--line);
+    overflow:hidden;display:flex;flex-direction:column;background:var(--bg-0);}
+  .cat-sw span{flex:1;display:block;}
+  .cat-meta{flex:1;min-width:0;}
+  .cat-meta b{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cat-meta .who{font-size:12px;color:var(--text-1);}
+  .cat-meta .sum{font-size:11.5px;color:var(--text-2);margin-top:2px;}
+  .cat-msg{font-size:13px;color:var(--text-1);padding:14px 2px;line-height:1.65;}
+  .cat-msg code{font-family:var(--mono);font-size:12px;color:var(--text-0);
+    background:var(--bg-0);padding:1px 5px;border-radius:4px;}
+  .cat-msg b{color:var(--text-0);}
   .foot{margin-top:26px;font-size:12px;color:var(--text-2);line-height:1.6;}
 </style>
 </head>
@@ -217,7 +247,9 @@
       </div>
     </div>
     <div class="controls">
-      <label class="filebtn">Import theme.json<input type="file" id="importFile" accept=".json,application/json"></label>
+      <button id="btnCatalog">Browse the catalog</button>
+      <label class="filebtn" title="A theme.json, a .zip pack, or theme.json selected together with its files">Import theme<input type="file" id="importFile" multiple accept=".json,.zip,application/json,application/zip,image/*,audio/*,.ttf,.otf,.mod,.xm,.it,.s3m"></label>
+      <label class="filebtn" title="Pick the theme's folder so its background, font, mascot and music come with it">Import folder<input type="file" id="importDir" webkitdirectory directory></label>
       <button class="ghost" id="btnDefault">Reset to default</button>
       <button id="btnJson">Download theme.json</button>
       <button class="primary" id="btnPack">Download theme pack (.zip)</button>
@@ -393,6 +425,26 @@
   </div>
 </div>
 
+<!-- ======================= catalog browser ======================= -->
+<div class="cat-back" id="catBack" hidden role="dialog" aria-modal="true" aria-labelledby="catTitle">
+  <div class="cat">
+    <div class="cat-head">
+      <div>
+        <h3 id="catTitle">Theme catalog</h3>
+        <p>Published themes from
+          <a href="https://github.com/A-Theme/RomM-Themes/tree/main/themes" target="_blank" rel="noopener">A-Theme/RomM-Themes</a>
+          &mdash; the same list the client shows on the console.</p>
+      </div>
+      <button class="ghost" id="catClose" aria-label="Close">Close</button>
+    </div>
+    <div class="cat-tools">
+      <input type="search" id="catSearch" placeholder="Filter by name or author&hellip;" autocomplete="off">
+      <button class="ghost" id="catReload">Reload</button>
+    </div>
+    <div class="cat-body" id="catBody"></div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
@@ -434,40 +486,176 @@ const MAX_ANIMATION_BYTES  = 48 * 1024 * 1024;
 const MAX_ANIMATION_FRAMES = 240;
 const MAX_ANIMATION_FPS    = 60;
 
-/* Starting palettes. "Borb" is the client's built-in look. */
+/* Starting palettes: a full 19-role look you can take as a base and edit.
+   "Borb (built-in)" is the client's own scheme. Every palette here is checked
+   for WCAG contrast on the pairs that actually break a theme - body text over
+   all three surfaces, muted text, the focus ring, and whatever sits on an
+   accent fill - so a palette is a safe place to start rather than a swatch
+   dump you then have to make legible. */
 const PRESETS = {
-  'Borb (built-in)': null,   /* null = the defaults above */
+  /* null = the built-in look defined above. */
+  'Borb (built-in)': null,
+
+  /* ---- Dark ---- */
   'Midnight Borb': {
     bg:'#07080F', surface:'#0D101C', surface_raised:'#141A2C', surface_hover:'#1E263F',
     border:'#2C3654', text:'#E4E9F7', text_strong:'#FFFFFF', text_muted:'#8C97B8',
-    text_disabled:'#525C7A', text_on_accent:'#07080F', accent:'#4C8DFF',
-    accent_hover:'#79A9FF', accent_alt:'#8A6BFF', focus_ring:'#9CC2FF',
-    success:'#4FC08D', warning:'#E8B04B', danger:'#E4605A', info:'#5AA9E6',
-    scrim:'#03040ACC'
+    text_disabled:'#525C7A', text_on_accent:'#07080F', accent:'#4C8DFF', accent_hover:'#79A9FF',
+    accent_alt:'#8A6BFF', focus_ring:'#9CC2FF', success:'#4FC08D', warning:'#E8B04B',
+    danger:'#E4605A', info:'#5AA9E6', scrim:'#03040ACC'
   },
-  'Paper': {
-    bg:'#F4F1EA', surface:'#FFFFFF', surface_raised:'#FBF9F4', surface_hover:'#EDE7DA',
-    border:'#D3CBBA', text:'#2A2620', text_strong:'#14110C', text_muted:'#6B6353',
-    text_disabled:'#A79E8C', text_on_accent:'#FFFFFF', accent:'#B4553C',
-    accent_hover:'#CC6A50', accent_alt:'#8A7A52', focus_ring:'#B4553C',
-    success:'#3F7D52', warning:'#A87A22', danger:'#A8382F', info:'#3A6B94',
-    scrim:'#2A2620B0'
+
+  'Blueprint': {
+    bg:'#071A2E', surface:'#0B2340', surface_raised:'#0F2D50', surface_hover:'#163C68',
+    border:'#1E4E85', text:'#D6E9FF', text_strong:'#FFFFFF', text_muted:'#87ACD4',
+    text_disabled:'#5A7CA6', text_on_accent:'#051524', accent:'#2EA8F0', accent_hover:'#5FC1FA',
+    accent_alt:'#9FD8FF', focus_ring:'#7FCCFF', success:'#3FC98A', warning:'#E8B44A',
+    danger:'#F0717A', info:'#5FC1FA', scrim:'#03101CD0'
   },
-  'Matrix': {
-    bg:'#000000', surface:'#04140A', surface_raised:'#072011', surface_hover:'#0C3019',
-    border:'#134D28', text:'#8FE8AC', text_strong:'#D6FFE4', text_muted:'#4E9A67',
-    text_disabled:'#2C5C3C', text_on_accent:'#000000', accent:'#28E060',
-    accent_hover:'#5CFF90', accent_alt:'#9CFF6A', focus_ring:'#5CFF90',
-    success:'#28E060', warning:'#D6E048', danger:'#E0483C', info:'#48C8E0',
-    scrim:'#000000D0'
+
+  'Deep Sea': {
+    bg:'#04121C', surface:'#071C2A', surface_raised:'#0A2536', surface_hover:'#103349',
+    border:'#17475F', text:'#D4EDF7', text_strong:'#FFFFFF', text_muted:'#83B1C7',
+    text_disabled:'#547F92', text_on_accent:'#03101A', accent:'#20D4D4', accent_hover:'#5FE8E8',
+    accent_alt:'#4FA8FF', focus_ring:'#7FF0F0', success:'#35D19B', warning:'#E0B451',
+    danger:'#EE7C83', info:'#5FB4FF', scrim:'#020A11D4'
   },
+
+  'Ultraviolet': {
+    bg:'#0A0618', surface:'#120B26', surface_raised:'#191036', surface_hover:'#26194E',
+    border:'#38266B', text:'#E4DEFF', text_strong:'#FFFFFF', text_muted:'#A093D1',
+    text_disabled:'#6B5C99', text_on_accent:'#080414', accent:'#9B82FF', accent_hover:'#B9A6FF',
+    accent_alt:'#E45CFF', focus_ring:'#B9A6FF', success:'#4FD19B', warning:'#E8B54F',
+    danger:'#FF6E88', info:'#6FB4FF', scrim:'#050310D8'
+  },
+
+  'Neon Arcade': {
+    bg:'#06040B', surface:'#0D0917', surface_raised:'#150F22', surface_hover:'#221733',
+    border:'#33244C', text:'#EDE4FF', text_strong:'#FFFFFF', text_muted:'#A18CCC',
+    text_disabled:'#6B5A94', text_on_accent:'#06040B', accent:'#FF2E88', accent_hover:'#FF66A8',
+    accent_alt:'#00E5FF', focus_ring:'#00E5FF', success:'#00E599', warning:'#FFD166',
+    danger:'#FF4D5E', info:'#22BFFF', scrim:'#030209DA'
+  },
+
+  'Slate': {
+    bg:'#171A1D', surface:'#1E2226', surface_raised:'#262B30', surface_hover:'#333940',
+    border:'#434A52', text:'#DDE2E7', text_strong:'#FFFFFF', text_muted:'#9BA5AF',
+    text_disabled:'#6C757E', text_on_accent:'#0B1119', accent:'#58A0DE', accent_hover:'#7CB8EB',
+    accent_alt:'#93A2B4', focus_ring:'#8FC4F2', success:'#4FB585', warning:'#D4A44A',
+    danger:'#DB6B66', info:'#6BA8D6', scrim:'#0B0D0FCC'
+  },
+
+  'Ink & Gold': {
+    bg:'#0B0B0C', surface:'#131315', surface_raised:'#1B1B1E', surface_hover:'#26262A',
+    border:'#38383E', text:'#E8E4DA', text_strong:'#FFFFFF', text_muted:'#A29D90',
+    text_disabled:'#6E6B64', text_on_accent:'#0B0B0C', accent:'#D4AF37', accent_hover:'#E8C860',
+    accent_alt:'#B9935C', focus_ring:'#E8C860', success:'#62B97E', warning:'#D4AF37',
+    danger:'#CE6058', info:'#7A9EC2', scrim:'#000000D8'
+  },
+
+  'Crimson Keep': {
+    bg:'#140609', surface:'#1E0A0F', surface_raised:'#290E15', surface_hover:'#3A151F',
+    border:'#4F1D2A', text:'#F0DDE1', text_strong:'#FFFFFF', text_muted:'#BD9099',
+    text_disabled:'#805B64', text_on_accent:'#14060A', accent:'#E8505F', accent_hover:'#F47B86',
+    accent_alt:'#D19040', focus_ring:'#FF8A95', success:'#5FBF84', warning:'#D9A445',
+    danger:'#FF6B6B', info:'#7CA9D6', scrim:'#0A0305D0'
+  },
+
+  'Sunset Drive': {
+    bg:'#16091F', surface:'#1F0D2B', surface_raised:'#2A1239', surface_hover:'#3A1A4E',
+    border:'#4E2467', text:'#F2E2F7', text_strong:'#FFFFFF', text_muted:'#B392C7',
+    text_disabled:'#71558A', text_on_accent:'#1A0A24', accent:'#FF6B9D', accent_hover:'#FF93B8',
+    accent_alt:'#FFA94D', focus_ring:'#FFB3CE', success:'#4FD1A0', warning:'#FFC24D',
+    danger:'#FF5E6B', info:'#7AB8FF', scrim:'#0D0514CC'
+  },
+
   'Grape': {
     bg:'#120A1C', surface:'#1B1029', surface_raised:'#241738', surface_hover:'#33224E',
     border:'#453066', text:'#EADFF7', text_strong:'#FFFFFF', text_muted:'#A38DC4',
-    text_disabled:'#6B5589', text_on_accent:'#120A1C', accent:'#B368F0',
-    accent_hover:'#C98EFF', accent_alt:'#F070B8', focus_ring:'#C98EFF',
-    success:'#5BC98E', warning:'#E8B04B', danger:'#E8607A', info:'#6FA8E8',
-    scrim:'#0A0512CC'
+    text_disabled:'#6B5589', text_on_accent:'#120A1C', accent:'#B368F0', accent_hover:'#C98EFF',
+    accent_alt:'#F070B8', focus_ring:'#C98EFF', success:'#5BC98E', warning:'#E8B04B',
+    danger:'#E8607A', info:'#6FA8E8', scrim:'#0A0512CC'
+  },
+
+  'Forest Floor': {
+    bg:'#0E1410', surface:'#141C16', surface_raised:'#1B251D', surface_hover:'#26332A',
+    border:'#35473A', text:'#DFE9E0', text_strong:'#FFFFFF', text_muted:'#93A897',
+    text_disabled:'#647767', text_on_accent:'#0B120D', accent:'#7FBF5F', accent_hover:'#9FD782',
+    accent_alt:'#D4AF37', focus_ring:'#A8E08A', success:'#6FCF7F', warning:'#D9A62E',
+    danger:'#DE6E5C', info:'#7BBBD6', scrim:'#060A07CC'
+  },
+
+  'Copper Oxide': {
+    bg:'#08201F', surface:'#0C2A29', surface_raised:'#113634', surface_hover:'#184642',
+    border:'#1F5B55', text:'#DCF2EE', text_strong:'#FFFFFF', text_muted:'#87B9B2',
+    text_disabled:'#578079', text_on_accent:'#061918', accent:'#3FD1BA', accent_hover:'#6EE3D0',
+    accent_alt:'#E0873F', focus_ring:'#7FEEDC', success:'#46CE93', warning:'#E0A83F',
+    danger:'#EA7168', info:'#5CB6DE', scrim:'#041312CC'
+  },
+
+  'Solar Flare': {
+    bg:'#14100C', surface:'#1C1711', surface_raised:'#251E16', surface_hover:'#352A1D',
+    border:'#4A3A26', text:'#F0E6D8', text_strong:'#FFFFFF', text_muted:'#AE9C84',
+    text_disabled:'#786A5A', text_on_accent:'#140F08', accent:'#FF8C1A', accent_hover:'#FFA94D',
+    accent_alt:'#FFD23F', focus_ring:'#FFC061', success:'#8ACE55', warning:'#FFD23F',
+    danger:'#FF6B4D', info:'#68B8E0', scrim:'#0A0805D4'
+  },
+
+  'Amber CRT': {
+    bg:'#0A0703', surface:'#120C05', surface_raised:'#1A1208', surface_hover:'#281B0C',
+    border:'#3D2A11', text:'#FFB000', text_strong:'#FFD466', text_muted:'#C78A08',
+    text_disabled:'#7E5800', text_on_accent:'#0A0703', accent:'#FFB000', accent_hover:'#FFCB4D',
+    accent_alt:'#FF8A2B', focus_ring:'#FFD466', success:'#C6DE1E', warning:'#FFCB4D',
+    danger:'#FF7038', info:'#E0A800', scrim:'#050301DC'
+  },
+
+  'Matrix': {
+    bg:'#000000', surface:'#04140A', surface_raised:'#072011', surface_hover:'#0C3019',
+    border:'#134D28', text:'#8FE8AC', text_strong:'#D6FFE4', text_muted:'#4E9A67',
+    text_disabled:'#2C5C3C', text_on_accent:'#000000', accent:'#28E060', accent_hover:'#5CFF90',
+    accent_alt:'#9CFF6A', focus_ring:'#5CFF90', success:'#28E060', warning:'#D6E048',
+    danger:'#E0483C', info:'#48C8E0', scrim:'#000000D0'
+  },
+
+  'Game Boy': {
+    bg:'#0F2010', surface:'#16301A', surface_raised:'#1B3A1D', surface_hover:'#234A26',
+    border:'#3A6E34', text:'#9BBC0F', text_strong:'#D0EC58', text_muted:'#7A9C10',
+    text_disabled:'#557018', text_on_accent:'#0F2010', accent:'#9BBC0F', accent_hover:'#C8E04A',
+    accent_alt:'#8BAC0F', focus_ring:'#D0EC58', success:'#9BBC0F', warning:'#D6C22A',
+    danger:'#D97526', info:'#7FC4A6', scrim:'#081006D8'
+  },
+
+  /* ---- Light ---- */
+  'Paper': {
+    bg:'#F4F1EA', surface:'#FFFFFF', surface_raised:'#FBF9F4', surface_hover:'#EDE7DA',
+    border:'#D3CBBA', text:'#2A2620', text_strong:'#14110C', text_muted:'#6B6353',
+    text_disabled:'#A79E8C', text_on_accent:'#FFFFFF', accent:'#B4553C', accent_hover:'#CC6A50',
+    accent_alt:'#8A7A52', focus_ring:'#B4553C', success:'#3F7D52', warning:'#A87A22',
+    danger:'#A8382F', info:'#3A6B94', scrim:'#2A2620B0'
+  },
+
+  'Arctic': {
+    bg:'#EEF4F9', surface:'#FFFFFF', surface_raised:'#F7FAFD', surface_hover:'#DDE9F3',
+    border:'#C2D4E3', text:'#18303F', text_strong:'#0A1C27', text_muted:'#55707F',
+    text_disabled:'#8CA3B2', text_on_accent:'#FFFFFF', accent:'#0E7FA8', accent_hover:'#0A6C90',
+    accent_alt:'#4C6FB5', focus_ring:'#0B6A8E', success:'#1E8A5F', warning:'#96670F',
+    danger:'#B03636', info:'#2A6FA8', scrim:'#0A1C27A8'
+  },
+
+  'Sakura': {
+    bg:'#FDF2F5', surface:'#FFFFFF', surface_raised:'#FFF7F9', surface_hover:'#F7E0E7',
+    border:'#E7C4CF', text:'#40222C', text_strong:'#2A121B', text_muted:'#7C5B67',
+    text_disabled:'#AD8F9A', text_on_accent:'#FFFFFF', accent:'#C9447A', accent_hover:'#A8335F',
+    accent_alt:'#7A6BB5', focus_ring:'#A83464', success:'#2F7F5B', warning:'#8A6110',
+    danger:'#B23A47', info:'#45699E', scrim:'#2A121BA8'
+  },
+
+  'Terracotta': {
+    bg:'#F7F0E8', surface:'#FFFBF6', surface_raised:'#FDF5EC', surface_hover:'#EEE0D0',
+    border:'#D8C4AE', text:'#3B2A20', text_strong:'#241812', text_muted:'#6F594A',
+    text_disabled:'#9E8B7A', text_on_accent:'#FFF8F2', accent:'#A8502A', accent_hover:'#C2673E',
+    accent_alt:'#5E6E3E', focus_ring:'#8E4021', success:'#37693D', warning:'#805E12',
+    danger:'#963226', info:'#375D7E', scrim:'#241812A8'
   }
 };
 
@@ -1207,12 +1395,16 @@ function exportPack(){
 /* ---------------------------------------------------------------------------
    Import
    --------------------------------------------------------------------------- */
-function importTheme(text){
+function importTheme(text, opts){
+  /* `opts.silent` is for the catalog: it goes on to fetch the very files the
+     "you must re-pick these" alert would be warning about, so showing that
+     alert first would be wrong as well as annoying. */
+  const silent = !!(opts && opts.silent);
   let doc;
   try { doc = JSON.parse(text); }
-  catch (e){ alert('That file is not valid JSON:\n\n' + e.message); return; }
+  catch (e){ alert('That file is not valid JSON:\n\n' + e.message); return null; }
   if (!doc || typeof doc !== 'object' || Array.isArray(doc)){
-    alert('A theme.json must be a JSON object.'); return;
+    alert('A theme.json must be a JSON object.'); return null;
   }
 
   state.meta.name    = typeof doc.name === 'string' ? doc.name : '';
@@ -1288,6 +1480,8 @@ function importTheme(text){
   const missing = ['bg','anim','font','mascot','bgm']
     .filter(k => state[k].name && !state[k].dataUrl)
     .map(k => state[k].name);
+  if (silent) return {unknown, missing};
+
   let msg = 'Theme imported.';
   if (unknown.length) msg += `\n\nIgnored (not a colour role, or a bad value):\n  ${unknown.join('\n  ')}`;
   if (missing.length){
@@ -1296,6 +1490,556 @@ function importTheme(text){
            `them in a pack:\n  ${missing.join('\n  ')}`;
   }
   alert(msg);
+  return {unknown, missing};
+}
+
+/* ---------------------------------------------------------------------------
+   The published catalog
+
+   The console and this editor read the SAME index: manifest.json at the root
+   of A-Theme/RomM-Themes. Everything here mirrors source/ui/theme_catalog.cpp
+   in the client, deliberately - if the two disagreed about how a folder name
+   becomes a URL, a theme would install on one and 404 on the other.
+
+   The one thing the editor does that the console does not is pull the asset
+   BYTES down as well as the names. A theme.json can only name its background;
+   fetching it means the preview here shows the real thing, and re-exporting
+   gives you a complete pack rather than a JSON with dangling references.
+   --------------------------------------------------------------------------- */
+const CATALOG_BASE     = 'https://raw.githubusercontent.com/A-Theme/RomM-Themes/main/';
+const CATALOG_MANIFEST = CATALOG_BASE + 'manifest.json';
+
+/**
+ * Percent-encode one path segment, byte for byte the same as
+ * theme_catalog.cpp's url_encode_segment.
+ *
+ * encodeURIComponent is close but not equal - it leaves !'()* alone - and
+ * "close" is how two implementations drift apart. Only RFC 3986 unreserved
+ * characters survive; a folder like "Midnight Borb" becomes "Midnight%20Borb".
+ */
+function encodeSeg(seg){
+  const bytes = new TextEncoder().encode(seg);
+  let out = '';
+  for (const b of bytes){
+    const ch = String.fromCharCode(b);
+    out += /[A-Za-z0-9\-_.~]/.test(ch) ? ch
+         : '%' + b.toString(16).toUpperCase().padStart(2, '0');
+  }
+  return out;
+}
+
+function themeFileUrl(folder, file){
+  if (!folder || !file) return '';
+  return CATALOG_BASE + 'themes/' + encodeSeg(folder) + '/' + encodeSeg(file);
+}
+
+/**
+ * Read manifest.json into rows.
+ *
+ * A row without a usable folder is skipped rather than failing the catalog,
+ * matching parse_catalog: one bad entry published upstream should not stop you
+ * opening any of the others. The folder goes through the same name gate an
+ * asset does, because on the console it becomes a directory on the SD card.
+ */
+function parseCatalog(doc){
+  if (!doc || !Array.isArray(doc.themes)) return null;
+  const out = [];
+  for (const t of doc.themes){
+    if (!t || typeof t !== 'object') continue;
+    const folder = typeof t.folder === 'string' ? t.folder : '';
+    if (!folder || nameProblem(folder)) continue;
+    out.push({
+      id:      typeof t.id === 'string' ? t.id : folder,
+      folder,
+      name:    typeof t.name === 'string' && t.name ? t.name : folder,
+      author:  typeof t.author === 'string' ? t.author : '',
+      version: typeof t.version === 'string' ? t.version : '',
+      roles:   typeof t.roles_set === 'number' ? t.roles_set : 0,
+      bytes:   typeof t.bytes === 'number' ? t.bytes : 0,
+      hasBg:     t.has_background === true,
+      hasFont:   t.has_font === true,
+      hasMascot: t.has_mascot === true,
+      hasMusic:  t.has_music === true,
+      animated:  t.animated === true
+    });
+  }
+  return out;
+}
+
+/** The one-line "what this changes" string, as CatalogEntry::summary builds it. */
+function catalogSummary(e){
+  const bits = [];
+  if (e.roles > 0) bits.push(e.roles + (e.roles === 1 ? ' colour' : ' colours'));
+  if (e.animated) bits.push('animated');
+  else if (e.hasBg) bits.push('background');
+  if (e.hasFont)   bits.push('font');
+  if (e.hasMascot) bits.push('mascot');
+  if (e.hasMusic)  bits.push('music');
+  if (!bits.length) return 'no changes';
+  let s = bits.join(' · ');
+  if (e.bytes > 0) s += '  —  ' + (e.bytes / 1048576).toFixed(2) + ' MB';
+  return s;
+}
+
+/* raw.githubusercontent serves nearly everything as text/plain, and a data URL
+   carrying the wrong type will not render in an <img> or load as @font-face.
+   So the type comes from the extension, which is what the console does too. */
+const MIME = {
+  png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
+  webp:'image/webp', bmp:'image/bmp',
+  ttf:'font/ttf', otf:'font/otf',
+  mp3:'audio/mpeg', ogg:'audio/ogg', opus:'audio/ogg',
+  flac:'audio/flac', wav:'audio/wav'
+};
+function mimeFor(name){
+  const dot = name.lastIndexOf('.');
+  const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+  return MIME[ext] || 'application/octet-stream';
+}
+
+async function fetchText(url){
+  const r = await fetch(url, {cache:'no-cache'});
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + url);
+  return r.text();
+}
+
+async function fetchDataUrl(url, name){
+  const r = await fetch(url, {cache:'no-cache'});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const blob = new Blob([await r.arrayBuffer()], {type: mimeFor(name)});
+  return await new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload  = () => res(String(fr.result));
+    fr.onerror = () => rej(new Error('could not read ' + name));
+    fr.readAsDataURL(blob);
+  });
+}
+
+/* Fetched entries, and the theme.json bodies fetched for the swatches - which
+   also means opening a theme you have already previewed costs no second
+   request. */
+let catalogRows = null;
+const catalogDocs = new Map();
+
+async function catalogDoc(folder){
+  if (catalogDocs.has(folder)) return catalogDocs.get(folder);
+  const doc = JSON.parse(await fetchText(themeFileUrl(folder, 'theme.json')));
+  catalogDocs.set(folder, doc);
+  return doc;
+}
+
+function catalogMessage(html){
+  $('catBody').innerHTML = '<div class="cat-msg">' + html + '</div>';
+}
+
+function openCatalog(){
+  $('catBack').hidden = false;
+  $('catSearch').value = '';
+  if (catalogRows) { renderCatalog(); $('catSearch').focus(); return; }
+  loadCatalog();
+}
+
+function closeCatalog(){ $('catBack').hidden = true; }
+
+async function loadCatalog(){
+  catalogMessage('Fetching the catalog&hellip;');
+  try {
+    const rows = parseCatalog(JSON.parse(await fetchText(CATALOG_MANIFEST)));
+    if (!rows) throw new Error('manifest has no "themes" array');
+    catalogRows = rows;
+    renderCatalog();
+    $('catSearch').focus();
+  } catch (e){
+    catalogRows = null;
+    catalogMessage(
+      '<b>Could not reach the catalog.</b><br>' + escapeHtml(e.message) +
+      '<br><br>The editor works entirely offline apart from this one screen, so ' +
+      'everything else still works. If you opened this file straight off disk ' +
+      '(<code>file://</code>), some browsers block the request &mdash; serve the ' +
+      'folder over <code>http://</code>, or use the desktop app, or download a ' +
+      'theme from <code>github.com/A-Theme/RomM-Themes</code> and import its ' +
+      '<code>theme.json</code>.'
+    );
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"]/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+/* Swatches are painted lazily. With 50-odd themes, fetching every theme.json
+   up front would be 50 requests to show a list nobody has scrolled yet; an
+   observer fetches only the rows that actually reach the screen. */
+const swatchObserver = ('IntersectionObserver' in window)
+  ? new IntersectionObserver((entries, obs) => {
+      for (const en of entries){
+        if (!en.isIntersecting) continue;
+        obs.unobserve(en.target);
+        paintSwatch(en.target);
+      }
+    }, {root: null, rootMargin: '120px'})
+  : null;
+
+async function paintSwatch(el){
+  const folder = el.dataset.folder;
+  try {
+    const doc = await catalogDoc(folder);
+    const cols = (doc && doc.colors) || {};
+    const pick = ['bg','surface_raised','accent','text'].map(k => {
+      const p = parseHex(cols[k]);
+      return p ? cssRgba(p) : null;
+    });
+    if (!pick.some(Boolean)) return;
+    el.textContent = '';
+    pick.forEach(v => {
+      const b = document.createElement('span');
+      b.style.background = v || 'transparent';
+      el.appendChild(b);
+    });
+  } catch (e) { /* a swatch is decoration; a failed one just stays blank */ }
+}
+
+function renderCatalog(){
+  const host = $('catBody');
+  const q = $('catSearch').value.trim().toLowerCase();
+  const rows = catalogRows.filter(e =>
+    !q || e.name.toLowerCase().includes(q) || e.author.toLowerCase().includes(q));
+
+  host.textContent = '';
+
+  if (!rows.length){
+    catalogMessage(q
+      ? 'Nothing matches <b>' + escapeHtml(q) + '</b>.'
+      : 'The catalog is empty.');
+    return;
+  }
+
+  rows.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+
+    const sw = document.createElement('div');
+    sw.className = 'cat-sw';
+    sw.dataset.folder = e.folder;
+    row.appendChild(sw);
+
+    const meta = document.createElement('div');
+    meta.className = 'cat-meta';
+    const b = document.createElement('b');
+    b.textContent = e.name;
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = (e.author ? 'by ' + e.author : 'unknown author') +
+                      (e.version ? '  ·  v' + e.version : '');
+    const sum = document.createElement('div');
+    sum.className = 'sum';
+    sum.textContent = catalogSummary(e);
+    meta.append(b, who, sum);
+    row.appendChild(meta);
+
+    const btn = document.createElement('button');
+    btn.className = 'primary';
+    btn.textContent = 'Open in editor';
+    btn.addEventListener('click', () => useCatalogTheme(e, row, btn));
+    row.appendChild(btn);
+
+    host.appendChild(row);
+    if (swatchObserver) swatchObserver.observe(sw); else paintSwatch(sw);
+  });
+}
+
+/**
+ * Load one catalog theme into the editor, assets and all.
+ *
+ * The asset names come from the theme's own theme.json rather than from the
+ * manifest - the manifest records only WHETHER a theme has a background, not
+ * what it is called - so exactly what the theme references is fetched and
+ * nothing else, which is the same rule the console downloads by.
+ *
+ * A failed asset is reported and skipped rather than aborting: a theme whose
+ * music 404s is still a theme worth having its colours.
+ */
+async function useCatalogTheme(entry, row, btn){
+  row.classList.add('busy');
+  btn.disabled = true;
+  const label = btn.textContent;
+  btn.textContent = 'Loading…';
+
+  const failed = [];
+  try {
+    const doc = await catalogDoc(entry.folder);
+    importTheme(JSON.stringify(doc), {silent:true});
+
+    /* The manifest's folder is the theme's identity on the SD card, so it wins
+       over the name the importer guessed from theme.json. */
+    state.meta.folder = entry.folder;
+    if (!state.meta.name) state.meta.name = entry.name;
+
+    const slots = [
+      {key:'bg',     name:state.bg.name},
+      {key:'anim',   name:state.anim.name},
+      {key:'font',   name:state.font.name},
+      {key:'mascot', name:state.mascot.name},
+      {key:'bgm',    name:state.bgm.name}
+    ].filter(s => s.name);
+
+    let done = 0;
+    for (const s of slots){
+      btn.textContent = `Loading ${++done}/${slots.length}…`;
+      try {
+        state[s.key].dataUrl =
+          await fetchDataUrl(themeFileUrl(entry.folder, s.name), s.name);
+      } catch (err){
+        failed.push(s.name);
+      }
+    }
+
+    pushStateToInputs();
+    applyPreviewFont();
+    render();
+    closeCatalog();
+
+    if (failed.length){
+      alert(`"${entry.name}" is loaded, but these files could not be ` +
+            `downloaded and are missing from the preview:\n  ${failed.join('\n  ')}`);
+    }
+  } catch (e){
+    alert(`Could not open "${entry.name}":\n\n${e.message}`);
+  } finally {
+    row.classList.remove('busy');
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Importing a whole theme, not just its JSON
+
+   A theme.json only NAMES its background, font, mascot and track, so importing
+   one file can never show you the theme - you get the colours and five dangling
+   references. The three routes below all end in the same place: a table of the
+   files that came with the theme, which importAssetsFrom() then draws on to
+   fill in exactly what theme.json asked for.
+
+     - a folder      (webkitdirectory) - the theme as it sits on the SD card
+     - several files (multi-select)    - theme.json plus whatever you picked
+     - a .zip pack                     - what this editor exports, and what
+                                         the catalog publishes
+
+   Matching is by base name, case-insensitively, because the SD card is
+   case-insensitive and a theme that works on the console should import here.
+   Where two folders hold a same-named file, the one sitting beside the
+   theme.json wins - that is the file the console would have opened.
+   --------------------------------------------------------------------------- */
+
+/** Split "Midnight Borb/art/bg.png" into its folder and its base name. */
+function splitPath(path){
+  const norm = String(path).replace(/\\/g, '/');
+  const cut = norm.lastIndexOf('/');
+  return {dir: cut < 0 ? '' : norm.slice(0, cut), base: cut < 0 ? norm : norm.slice(cut + 1)};
+}
+
+function readFileAsDataUrl(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload  = () => res(String(fr.result));
+    fr.onerror = () => rej(new Error('could not read ' + file.name));
+    fr.readAsDataURL(file);
+  });
+}
+function readFileAsText(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload  = () => res(String(fr.result));
+    fr.onerror = () => rej(new Error('could not read ' + file.name));
+    fr.readAsText(file);
+  });
+}
+
+/**
+ * Fill the asset slots from a bundle of files that arrived with the theme.
+ *
+ * `bundle` is a list of {dir, base, text(), dataUrl()}. Only names theme.json
+ * actually mentions are pulled in - an unrelated file sitting in the folder is
+ * not swept into the pack.
+ */
+async function importAssetsFrom(bundle, homeDir){
+  const want = [
+    {key:'bg',     name:state.bg.name},
+    {key:'anim',   name:state.anim.name},
+    {key:'font',   name:state.font.name},
+    {key:'mascot', name:state.mascot.name},
+    {key:'bgm',    name:state.bgm.name}
+  ].filter(s => s.name);
+
+  const missing = [];
+  for (const slot of want){
+    const target = slot.name.toLowerCase();
+    const hits = bundle.filter(f => f.base.toLowerCase() === target);
+    const pick = hits.find(f => f.dir === homeDir) || hits[0];
+    if (!pick){ missing.push(slot.name); continue; }
+    try {
+      state[slot.key].dataUrl = await pick.dataUrl();
+    } catch (e){
+      missing.push(slot.name + ' (could not be read)');
+    }
+  }
+  return missing;
+}
+
+/** The shared tail of every import route. */
+async function finishBundleImport(bundle, folderGuess){
+  const themeFiles = bundle.filter(f => f.base.toLowerCase() === 'theme.json');
+  if (!themeFiles.length){
+    alert('No theme.json in that selection.\n\nPick the theme’s folder, or a ' +
+          '.zip pack, or select theme.json together with its files.');
+    return;
+  }
+  /* Shallowest wins, so a zip that nests everything under one directory and a
+     zip with theme.json at the root both land on the right file. */
+  themeFiles.sort((a, b) => a.dir.split('/').length - b.dir.split('/').length);
+  const entry = themeFiles[0];
+
+  let text;
+  try { text = await entry.text(); }
+  catch (e){ alert('Could not read theme.json.'); return; }
+
+  const res = importTheme(text, {silent:true});
+  if (!res) return;              // importTheme already explained why
+
+  if (folderGuess) state.meta.folder = folderGuess;
+  else if (entry.dir) state.meta.folder = splitPath(entry.dir).base;
+
+  const missing = await importAssetsFrom(bundle, entry.dir);
+
+  pushStateToInputs();
+  applyPreviewFont();
+  render();
+
+  const loaded = ['bg','anim','font','mascot','bgm'].filter(k => state[k].dataUrl).length;
+  let msg = 'Theme imported' + (loaded ? ` with ${loaded} file${loaded === 1 ? '' : 's'}.` : '.');
+  if (res.unknown.length){
+    msg += `\n\nIgnored (not a colour role, or a bad value):\n  ${res.unknown.join('\n  ')}`;
+  }
+  if (missing.length){
+    msg += `\n\nNamed by theme.json but not in what you picked:\n  ${missing.join('\n  ')}`;
+  }
+  alert(msg);
+}
+
+/** A folder pick, or a multi-file pick. */
+function bundleFromFiles(fileList){
+  return Array.from(fileList).map(f => {
+    const {dir, base} = splitPath(f.webkitRelativePath || f.name);
+    return {dir, base, file:f,
+            text: () => readFileAsText(f),
+            dataUrl: () => readFileAsDataUrl(f)};
+  });
+}
+
+/* ---- reading a .zip -------------------------------------------------------
+   The editor writes store-only packs, but a pack that has been round-tripped
+   through a normal zip tool will be deflated, so both are handled. Deflate uses
+   the platform's DecompressionStream rather than a bundled inflate, which keeps
+   this file dependency-free; where that is missing, a deflated entry is
+   reported rather than silently skipped. */
+const ZIP_EOCD = 0x06054b50, ZIP_CEN = 0x02014b50;
+
+async function inflateRaw(bytes){
+  if (typeof DecompressionStream !== 'function'){
+    throw new Error('this browser cannot decompress zip entries');
+  }
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+function readZip(buffer){
+  const dv = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+
+  /* The end record is last, but a trailing comment can push it up to 64 KB
+     back from the end, so scan rather than assuming a fixed offset. */
+  let eocd = -1;
+  const floor = Math.max(0, bytes.length - 22 - 0xFFFF);
+  for (let i = bytes.length - 22; i >= floor; i--){
+    if (dv.getUint32(i, true) === ZIP_EOCD){ eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('not a zip file (no end-of-archive record)');
+
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+
+  const dec = new TextDecoder('utf-8');
+  const out = [];
+  for (let i = 0; i < count; i++){
+    if (dv.getUint32(p, true) !== ZIP_CEN) throw new Error('damaged zip directory');
+    const method  = dv.getUint16(p + 10, true);
+    const csize   = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen= dv.getUint16(p + 30, true);
+    const cmtLen  = dv.getUint16(p + 32, true);
+    const local   = dv.getUint32(p + 42, true);
+    const name    = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + extraLen + cmtLen;
+
+    if (name.endsWith('/')) continue;                 // a directory entry
+    const lnLen = dv.getUint16(local + 26, true);
+    const leLen = dv.getUint16(local + 28, true);
+    const start = local + 30 + lnLen + leLen;
+    out.push({name, method, data: bytes.subarray(start, start + csize)});
+  }
+  return out;
+}
+
+async function bundleFromZip(file){
+  const entries = readZip(await file.arrayBuffer());
+  return entries.map(e => {
+    const {dir, base} = splitPath(e.name);
+    const raw = async () => {
+      if (e.method === 0) return e.data;
+      if (e.method === 8) return await inflateRaw(e.data);
+      throw new Error('unsupported compression in ' + e.name);
+    };
+    return {
+      dir, base,
+      text: async () => new TextDecoder('utf-8').decode(await raw()),
+      dataUrl: async () => {
+        const blob = new Blob([await raw()], {type: mimeFor(base)});
+        return await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload  = () => res(String(fr.result));
+          fr.onerror = () => rej(new Error('could not read ' + base));
+          fr.readAsDataURL(blob);
+        });
+      }
+    };
+  });
+}
+
+/** The entry point every import control funnels into. */
+async function importPicked(fileList){
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  try {
+    if (files.length === 1 && /\.zip$/i.test(files[0].name)){
+      const guess = files[0].name.replace(/\.zip$/i, '');
+      await finishBundleImport(await bundleFromZip(files[0]), safeName(guess));
+      return;
+    }
+    /* A folder pick reports every file's path relative to the folder chosen,
+       so its first segment is the theme's folder name - which is the theme's
+       identity on the console, and worth keeping. */
+    let guess = '';
+    const rel = files[0].webkitRelativePath;
+    if (rel) guess = rel.replace(/\\/g, '/').split('/')[0] || '';
+
+    await finishBundleImport(bundleFromFiles(files), guess);
+  } catch (e){
+    alert('Could not import that:\n\n' + e.message);
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1532,14 +2276,28 @@ function init(){
   });
   $('btnPack').addEventListener('click', exportPack);
 
-  $('importFile').addEventListener('change', ev => {
-    const f = ev.target.files && ev.target.files[0];
-    if (!f) return;
-    const fr = new FileReader();
-    fr.onload = () => importTheme(String(fr.result));
-    fr.onerror = () => alert('Could not read that file.');
-    fr.readAsText(f);
-    ev.target.value = '';
+  /* Catalog browser */
+  $('btnCatalog').addEventListener('click', openCatalog);
+  $('catClose').addEventListener('click', closeCatalog);
+  $('catReload').addEventListener('click', () => { catalogRows = null; catalogDocs.clear(); loadCatalog(); });
+  $('catSearch').addEventListener('input', () => { if (catalogRows) renderCatalog(); });
+  /* Clicking the dimmed area closes; clicking the dialog itself must not. */
+  $('catBack').addEventListener('mousedown', ev => { if (ev.target === $('catBack')) closeCatalog(); });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && !$('catBack').hidden) closeCatalog();
+  });
+
+  /* One handler for both pickers: a lone theme.json, a .zip pack, a multi-file
+     selection, or a whole folder all end up in the same importer. */
+  ['importFile', 'importDir'].forEach(id => {
+    $(id).addEventListener('change', ev => {
+      /* input.files is LIVE: resetting the input to re-arm it for a second pick
+         of the same folder empties the very list we are about to read, so copy
+         it out first. */
+      const files = Array.from(ev.target.files || []);
+      ev.target.value = '';
+      importPicked(files);
+    });
   });
 
   applyPreviewFont();
