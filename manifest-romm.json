@@ -1,5 +1,5 @@
 {
-  "name": "Aramaki's RomM Theme Editor",
+  "name": "Aramaki's Theme Editor — RomM Client",
   "short_name": "RomM Themes",
   "description": "A visual, in-browser editor for RomM Switch client theme.json files.",
   "start_url": "./romm-theme-editor.html",

@@ -1,5 +1,5 @@
 {
-  "name": "Aramaki's Tinfoil Theme Editor",
+  "name": "Aramaki's Theme Editor — Tinfoil",
   "short_name": "Theme Editor",
   "description": "A visual, in-browser editor for Tinfoil theme.json files.",
   "start_url": "./tinfoil-theme-editor.html",
