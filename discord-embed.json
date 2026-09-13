@@ -3,9 +3,9 @@
   "avatar_url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png",
   "embeds": [
     {
-      "title": "🎨 Aramaki's Tinfoil Theme Editor is here!",
+      "title": "🎨 Aramaki's Theme Editor — now for Tinfoil *and* the RomM Switch client",
       "url": "https://github.com/A-Theme/Theme-App",
-      "description": "A full visual, in-browser editor for Tinfoil `theme.json` files — no more hand-editing raw JSON and guessing what a field does. Load a theme, tweak colors/logos/backgrounds/audio with real UI controls, preview it live, and export.",
+      "description": "Two visual editors in one page, no hand-editing raw JSON. The original **Tinfoil** editor for `theme.json`, and a new one for the **RomM Switch client** — colours, backgrounds, fonts, mascot art and music. Both run in the browser, install as apps, and ship as a Windows desktop build.",
       "color": 49919,
       "thumbnail": {
         "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png"
@@ -16,12 +16,12 @@
       "fields": [
         {
           "name": "✨ Features",
-          "value": "• Auto-generates a full editor from any theme.json\n• Live 16:9 preview of your actual theme layout\n• Logo preview at true size + an in-browser music tester\n• Palette generator (10 schemes) + one-click extraction from your background image\n• 100% local — nothing ever leaves your browser",
+          "value": "• **Tinfoil** — auto-generated editor, live 16:9 preview, palette generator, k-means extraction from your background\n• **RomM** — 19 semantic colour roles, WCAG readability checks, live animated-background memory budget\n• Browse the published theme catalog and open any theme with its assets\n• Background motion previewed with the client's own arithmetic, not a lookalike\n• 100% local — nothing you open ever leaves your machine",
           "inline": false
         },
         {
           "name": "🚀 Get It",
-          "value": "[📁 Repo & Full Docs](https://github.com/A-Theme/Theme-App)\n[💻 Windows Desktop App](https://github.com/A-Theme/Theme-App/releases/latest)\n[📄 Sample Theme to Try](https://github.com/A-Theme/Theme-App/blob/main/sample.json)",
+          "value": "[📁 Repo & Full Docs](https://github.com/A-Theme/Theme-App)\n[💻 Windows Desktop App](https://github.com/A-Theme/Theme-App/releases/latest)\n[🎮 RomM Theme Database](https://github.com/A-Theme/RomM-Themes)",
           "inline": false
         }
       ],

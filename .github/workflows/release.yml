@@ -1,0 +1,111 @@
+# Build the desktop app and publish a release, on tag.
+#
+# Packaging happens here rather than on whoever's laptop tagged it, so the
+# artifacts attached to a release are always built from exactly the commit the
+# tag points at, with a known toolchain. Push a v* tag and the release appears.
+#
+#   npm version minor -m "..."      # bumps package.json and tags
+#   git push && git push --tags
+#
+# The Windows build is produced on Windows so the executable can carry its icon
+# and version metadata - @electron/packager needs wine to do that from Linux,
+# and a build that silently drops the icon is worse than one that takes an
+# extra runner.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (must already exist)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win32
+            name: win32-x64
+          - os: ubuntu-latest
+            platform: linux
+            name: linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: npm ci || npm install
+
+      - name: Package
+        shell: bash
+        run: |
+          npx electron-packager . \
+            --platform=${{ matrix.platform }} --arch=x64 \
+            --out=dist --overwrite \
+            --ignore='^/dist($|/)' \
+            --ignore='^/tests($|/)' \
+            --ignore='^/\.github($|/)' \
+            --ignore='^/\.gitignore$' \
+            --ignore='^/discord-embed\.json$' \
+            --ignore='^/node_modules($|/)'
+
+      # The launcher and both editors must actually be in the bundle. A packager
+      # ignore rule that is slightly too greedy produces an app that starts and
+      # then cannot find its own pages, which is not obvious from a build log.
+      - name: Verify the bundle
+        shell: bash
+        run: |
+          set -e
+          APP=$(find dist -name app.asar | head -1)
+          [ -n "$APP" ] || { echo "no app.asar produced"; exit 1; }
+          LIST=$(npx asar list "$APP")
+          for f in /index.html /romm-theme-editor.html /tinfoil-theme-editor.html /main.js; do
+            echo "$LIST" | grep -qx "$f" || { echo "MISSING from bundle: $f"; exit 1; }
+          done
+          echo "bundle contains the launcher and both editors"
+
+      - name: Zip
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          DIR=$(find dist -maxdepth 1 -mindepth 1 -type d | head -1)
+          OUT="AramakiThemeEditor-${VERSION}-${{ matrix.name }}.zip"
+          cd "$DIR" && 7z a -tzip "../../$OUT" . >/dev/null || (cd "$DIR" && zip -qr "../../$OUT" .)
+          cd "$GITHUB_WORKSPACE" && ls -la *.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: '*.zip'
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - run: ls -la artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: artifacts/*.zip
