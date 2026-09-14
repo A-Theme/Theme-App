@@ -111,11 +111,31 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
       - run: ls -la artifacts
+
+      # Release notes come from CHANGELOG.md rather than being written into the
+      # tag or the web UI, so they are reviewable in a pull request like
+      # anything else and cannot be lost by the tag push failing.
+      - name: Extract the notes for this version
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          awk -v v="## $VERSION" '
+            $0 == v { on = 1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md > NOTES.md
+          if [ ! -s NOTES.md ]; then
+            echo "No CHANGELOG.md section for $VERSION - add one before releasing." >&2
+            exit 1
+          fi
+          cat NOTES.md
       - uses: softprops/action-gh-release@v2
         with:
           # On a manual run the tag does not exist yet; the action creates it
@@ -124,5 +144,8 @@ jobs:
           # that cannot be cut without shell access is a release nobody cuts.
           tag_name: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }}
           name: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }}
+          body_path: NOTES.md
+          # Appends the commit list under the written notes rather than
+          # replacing them.
           generate_release_notes: true
           files: artifacts/*.zip
