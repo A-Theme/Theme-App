@@ -46,7 +46,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22+, not 20: @electron/asar refuses to run on anything older, and
+          # the verify step below uses it. electron-packager's own deps warn
+          # EBADENGINE on 20 too.
+          node-version: '22'
 
       - name: Install
         run: npm ci || npm install
@@ -73,7 +76,10 @@ jobs:
           set -e
           APP=$(find dist -name app.asar | head -1)
           [ -n "$APP" ] || { echo "no app.asar produced"; exit 1; }
-          LIST=$(npx asar list "$APP")
+          # tr strips the CR the Windows runner leaves on each line, which
+          # would make every grep -x miss.
+          LIST=$(npx asar list "$APP" | tr -d '\r')
+          echo "$LIST"
           for f in /index.html /romm-theme-editor.html /tinfoil-theme-editor.html /main.js; do
             echo "$LIST" | grep -qx "$f" || { echo "MISSING from bundle: $f"; exit 1; }
           done
