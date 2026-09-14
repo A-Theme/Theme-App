@@ -60,12 +60,12 @@ jobs:
           npx electron-packager . \
             --platform=${{ matrix.platform }} --arch=x64 \
             --out=dist --overwrite \
-            --ignore='^/dist($|/)' \
-            --ignore='^/tests($|/)' \
-            --ignore='^/\.github($|/)' \
-            --ignore='^/\.gitignore$' \
-            --ignore='^/discord-embed\.json$' \
-            --ignore='^/node_modules($|/)'
+            --ignore='^[\\/]dist([\\/]|$)' \
+            --ignore='^[\\/]tests([\\/]|$)' \
+            --ignore='^[\\/]\.github([\\/]|$)' \
+            --ignore='^[\\/]\.gitignore$' \
+            --ignore='^[\\/]discord-embed\.json$' \
+            --ignore='^[\\/]node_modules([\\/]|$)'
 
       # The launcher and both editors must actually be in the bundle. A packager
       # ignore rule that is slightly too greedy produces an app that starts and
@@ -76,14 +76,21 @@ jobs:
           set -e
           APP=$(find dist -name app.asar | head -1)
           [ -n "$APP" ] || { echo "no app.asar produced"; exit 1; }
-          # tr strips the CR the Windows runner leaves on each line, which
-          # would make every grep -x miss.
-          LIST=$(npx asar list "$APP" | tr -d '\r')
+          # The Windows runner leaves a CR on each line AND asar lists paths
+          # with backslashes there, so normalise both before matching. Either
+          # one alone makes every grep -x miss.
+          LIST=$(npx asar list "$APP" | tr -d '\r' | tr '\\' '/')
           echo "$LIST"
           for f in /index.html /romm-theme-editor.html /tinfoil-theme-editor.html /main.js; do
             echo "$LIST" | grep -qx "$f" || { echo "MISSING from bundle: $f"; exit 1; }
           done
-          echo "bundle contains the launcher and both editors"
+          # And nothing that has no business shipping. The ignore patterns used
+          # forward slashes only, so Windows quietly bundled node_modules and
+          # the test suite until the listing above made it visible.
+          for f in /node_modules /tests /.github; do
+            echo "$LIST" | grep -qx "$f" && { echo "SHOULD NOT BE BUNDLED: $f"; exit 1; }
+          done
+          echo "bundle is clean: launcher, both editors, no stowaways"
 
       - name: Zip
         shell: bash
