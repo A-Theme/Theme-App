@@ -304,6 +304,7 @@ a Tinfoil theme:
 | **Animated background** | sprite sheets (cheap — one texture) or animated GIF, inside a 48 MB texture budget |
 | **Font** | a `.ttf`/`.otf` replacing the UI face at all five sizes |
 | **Mascot** | swap the Borb art |
+| **Focus effect** | smoke, embers, glow, shimmer, pulse or fade around the selected item — procedural, so no art and no memory |
 | **Music** | MP3, OGG, Opus, FLAC, and tracker modules (`.mod`/`.xm`/`.it`/`.s3m`) |
 
 What the editor does for you:
@@ -323,6 +324,16 @@ What the editor does for you:
   approximation would be worse than none, looking authoritative while being wrong.
   [`tests/check-motion.mjs`](tests/check-motion.mjs) holds it to that: 6336 inputs
   through both implementations, byte-identical output required.
+- **Focus effects, previewed the same way.** The six kinds the client can draw
+  around whatever is selected — `smoke`, `embers`, `glow`, `shimmer`, `pulse`,
+  `fade` — run live on the focused card, the focused button, the button in a
+  dialog. They are procedural: no art ships with them and they cost no memory.
+  The maths is a port of the client's `theme_effects.cpp`, held to the same
+  standard as motion by [`tests/check-effects.mjs`](tests/check-effects.mjs) —
+  8606 inputs, bit-identical floats required — and
+  [`tests/check-effect-preview.mjs`](tests/check-effect-preview.mjs) checks the
+  pixels that reach the canvas, including that nothing ever reaches more than
+  26px outside the element it decorates.
 - **20 starting palettes**, each setting all 19 roles and contrast-checked before
   it ships, so a palette is a safe base rather than a swatch dump you then have to
   make legible.

@@ -148,6 +148,10 @@
   .sbg{position:absolute;inset:0;background-size:100% 100%;background-position:0 0;
     background-repeat:no-repeat;transform-origin:0 0;will-change:transform;}
   .sdim{position:absolute;inset:0;}
+  /* The focus effect is drawn, not styled: it is a port of the client's own
+     per-pixel maths, so it needs a canvas rather than a box-shadow. Sits above
+     .slayer and never takes a click. */
+  .sfx{position:absolute;left:0;top:0;pointer-events:none;}
   .slayer{position:absolute;inset:0;padding:40px 64px;}   /* title-safe inset */
 
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
@@ -343,6 +347,32 @@
             <div class="meter" id="budgetMeter"><span style="width:0%"></span></div>
             <div class="budget-txt" id="budgetTxt"></div>
           </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Focus effect <span class="note" id="fxInfo"></span></h2>
+        <div class="body">
+          <div class="field"><label></label><span class="hint">Drawn around whatever is selected &mdash; the highlighted card, the focused button. Procedural, so it ships no art and costs no memory.</span></div>
+          <div class="field"><label for="fxKind">Kind</label>
+            <select id="fxKind">
+              <option value="none">none</option>
+              <option value="smoke">smoke &mdash; soft plume off the top</option>
+              <option value="embers">embers &mdash; sparks rising from below</option>
+              <option value="glow">glow &mdash; breathing halo</option>
+              <option value="shimmer">shimmer &mdash; highlight running the border</option>
+              <option value="pulse">pulse &mdash; the ring breathes</option>
+              <option value="fade">fade &mdash; steady soft halo, no movement</option>
+            </select></div>
+          <div class="field"><label for="fxSpeed">Speed</label>
+            <input type="range" id="fxSpeed" min="0.1" max="8" step="0.1" value="1">
+            <span class="val" id="fxSpeedVal">1.0</span></div>
+          <div class="field"><label for="fxAmount">Amount</label>
+            <input type="range" id="fxAmount" min="0" max="100" step="1" value="40">
+            <span class="val" id="fxAmountVal">40</span></div>
+          <div class="field"><label for="fxColor">Colour</label>
+            <select id="fxColor"></select></div>
+          <div class="field"><label></label><span class="hint">A role, not a hex &mdash; so the effect moves with the palette instead of being the one part of the theme that ignores it.</span></div>
         </div>
       </div>
 
@@ -709,6 +739,7 @@ const state = {
   colors: Object.assign({}, DEFAULTS),
   bg:   {name:'', dataUrl:'', dim:0},
   motion:{kind:'none', speed:1, amount:24},
+  effect:{kind:'none', speed:1, amount:40, color:''},
   anim: {kind:'none', name:'', dataUrl:'', fw:320, fh:180, frames:8, fps:12, loop:true},
   font: {name:'', dataUrl:''},
   mascot:{name:'', dataUrl:''},
@@ -907,7 +938,7 @@ function libraryScreen(){
     </div>
     <div class="grid">
       ${cards.map(g => `
-        <div class="card" style="
+        <div class="card" ${g.focus ? 'data-focus="12"' : ''} style="
              background:${g.focus ? c('surface_hover') : c('surface_raised')};
              border-color:${g.focus ? c('focus_ring') : c('border')};
              ${g.focus ? `box-shadow:0 0 0 3px ${c('focus_ring')};` : ''}">
@@ -939,7 +970,7 @@ function detailScreen(){
         <div class="meta" style="color:${c('text')}">Base game &middot; 2.4 GB &middot; USA</div>
         <div class="meta" style="color:${c('text_muted')}">Two DLC and one update available</div>
         <div class="btnrow">
-          <div class="pbtn" style="background:${c('accent')};color:${c('text_on_accent')}">Install</div>
+          <div class="pbtn" data-focus="10" style="background:${c('accent')};color:${c('text_on_accent')}">Install</div>
           <div class="pbtn" style="background:${c('surface_raised')};color:${c('text')};border:1px solid ${c('border')}">Files</div>
           <div class="pbtn" style="background:transparent;color:${c('text_disabled')};border:1px solid ${c('border')}">Delete</div>
         </div>
@@ -966,7 +997,7 @@ function modalScreen(){
         <p style="color:${c('text')}">2.4 GB to the SD card. Two DLC and one update
            will be installed alongside it.</p>
         <div class="btnrow" style="margin:0">
-          <div class="pbtn" style="background:${c('accent')};color:${c('text_on_accent')}">Install</div>
+          <div class="pbtn" data-focus="10" style="background:${c('accent')};color:${c('text_on_accent')}">Install</div>
           <div class="pbtn" style="background:transparent;color:${c('text')};border:1px solid ${c('border')}">Cancel</div>
         </div>
       </div>
@@ -1078,6 +1109,20 @@ function renderPreview(){
     setMotionReadout(-1);
   }
   syncMotionLoop();
+
+  /* The effect overlay, like the background layer, is kept out of the innerHTML
+     rebuild - a canvas that is recreated per render is a canvas that is blank
+     for a frame every time a slider moves. */
+  if (!sfxEl){
+    sfxEl = document.createElement('canvas');
+    sfxEl.className = 'sfx';
+    sfxEl.width = BG_SCREEN_W;   sfxEl.height = BG_SCREEN_H;
+    sfxEl.style.width = BG_SCREEN_W + 'px';
+    sfxEl.style.height = BG_SCREEN_H + 'px';
+    sfxCtx = sfxEl.getContext('2d');
+  }
+  s.appendChild(sfxEl);          // over .slayer
+  drawFocusEffect(motionClockMs);
 
   /* The mascot is NOT drawn here. It used to be pinned to the corner of the
      library and dialog mocks, and no code in the client draws it there - the
@@ -1204,6 +1249,331 @@ function sheetSource(anim, frame, sheetW, sheetH){
           w:anim.fw, h:anim.fh};
 }
 
+/* ---------------------------------------------------------------------------
+   Focus effects
+
+   A direct port of source/ui/theme_effects.cpp, held to the same standard as
+   the motion port above: not "something that looks like smoke", but the same
+   hash, the same lifetimes, the same clamps. tests/check-effects.mjs diffs
+   every function here against the C++ output row by row, so a divergence is a
+   failing test rather than a surprise on the console.
+
+   The client's maths is stateless on purpose - particle i at time t is derived
+   from i and t, never stepped - which is why the preview can jump the clock,
+   pause, or rebuild the DOM without the effect drifting out of sync.
+   --------------------------------------------------------------------------- */
+const EFFECT_KINDS = ['none','smoke','embers','glow','shimmer','pulse','fade'];
+const EFFECT_BLEED = 26;          // kEffectBleed
+const MAX_EFFECT_PARTICLES = 48;  // kMaxEffectParticles
+
+const effectParticleKind = k => k === 'smoke' || k === 'embers';
+function effectEnabled(fx){
+  return !!fx && fx.kind !== 'none' && EFFECT_KINDS.includes(fx.kind) && fx.amount > 0;
+}
+
+/* The client's hashf(): a hash, not a generator, so particle i looks the same
+   every frame instead of flickering in place. Math.imul is the only way to get
+   C's wrapping 32-bit multiply out of JavaScript. */
+function hashf(i, k){
+  let h = (Math.imul(i, 374761393) + Math.imul(k, 668265263)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return f32((h & 0xFFFFFF) / 0xFFFFFF);
+}
+
+/* 0..1..0, so a cycle ends where it began. Distinct from triangleWave() above:
+   that one is fed an already-wrapped phase, this one wraps its own. */
+function triangle01(p){
+  p = f32(p - Math.floor(p));
+  return p < 0.5 ? f32(p * 2) : f32(f32(1 - p) * 2);
+}
+const easedFx = p => f32(0.5 - f32(0.5 * f32(Math.cos(f32(triangle01(p) * PI_F)))));
+
+/**
+ * Particles for smoke or embers at `ms`, in 1280x720 screen pixels.
+ *
+ * Empty for every other kind, for a disabled effect and for a degenerate rect,
+ * and never longer than MAX_EFFECT_PARTICLES.
+ */
+function effectParticles(fx, r, ms){
+  const out = [];
+  if (!effectEnabled(fx) || !effectParticleKind(fx.kind)) return out;
+  if (r.w <= 0 || r.h <= 0) return out;
+
+  const embers = fx.kind === 'embers';
+  const speed  = f32(fx.speed);
+
+  /* Density follows the perimeter, so the same amount reads the same on a wide
+     row and on a small pill instead of thinning out on one of them. */
+  const perim  = f32(f32(r.w + r.h) * 2);
+  const wanted = Math.trunc(f32(f32(f32(perim / 90) * f32(fx.amount / 40)) *
+                                (embers ? f32(1.25) : 1)));
+  const count  = clampi(wanted, 0, MAX_EFFECT_PARTICLES);
+  if (count <= 0) return out;
+
+  const life = f32((embers ? 1500 : 2600) / Math.max(speed, f32(0.1)));
+  const t    = f32(ms);
+
+  const right = r.x + r.w, bottom = r.y + r.h;
+
+  for (let i = 0; i < count; i++){
+    /* Each particle runs its own offset through the lifetime, or they would
+       all spawn together and pulse as one blob. */
+    const phase = f32(f32(t / life) + hashf(i, 1)) % 1;
+
+    const where = hashf(i, 2);
+    const wf = f32(r.w), hf = f32(r.h);
+    const half = f32(wf / f32(wf + hf));     // the top/bottom share of the perimeter
+    let sx, sy;
+    if (where < half){
+      /* Top or bottom edge. Smoke favours the top, embers the bottom. */
+      const along = f32(where / Math.max(half, f32(0.0001)));
+      sx = f32(f32(r.x) + f32(along * wf));
+      sy = f32(embers ? bottom : r.y);
+    } else {
+      const along = f32(f32(where - half) / Math.max(f32(1 - half), f32(0.0001)));
+      sx = f32(hashf(i, 3) < 0.5 ? r.x : right);
+      sy = f32(f32(r.y) + f32(along * hf));
+    }
+
+    /* Rise and spread. Embers go further and faster; smoke widens as it
+       climbs, which is most of what makes it read as smoke. */
+    const climb = f32(f32(embers ? 22 : 17) * phase);
+    const drift = f32(f32(f32(hashf(i, 4) - f32(0.5)) * f32(embers ? 9 : 15)) * phase);
+
+    const p = {
+      x: f32(sx + drift),
+      y: f32(sy - climb),
+      radius: embers
+        ? f32(f32(0.9) + f32(hashf(i, 5) * f32(1.5)))
+        : f32(f32(2 + f32(hashf(i, 5) * f32(3.4))) * f32(f32(0.55) + f32(phase * f32(0.8)))),
+      alpha: 0
+    };
+
+    /* In fast, out slow; embers also flicker. */
+    let a = phase < f32(0.18) ? f32(phase / f32(0.18))
+                              : f32(1 - f32(f32(phase - f32(0.18)) / f32(0.82)));
+    a = Math.max(0, Math.min(1, a));
+    if (embers){
+      a = f32(a * f32(f32(0.65) + f32(f32(0.35) * f32(Math.sin(f32(f32(t / 90) + f32(i)))))));
+    }
+    const peak = embers ? 200 : 90;
+    p.alpha = clampi(Math.trunc(f32(f32(f32(a * peak) * f32(fx.amount / 100)) * f32(1.6))), 0, 255);
+
+    /* The bleed budget is a promise to the caller, so it is enforced rather
+       than assumed from the numbers above. */
+    p.x = Math.max(f32(r.x - EFFECT_BLEED), Math.min(p.x, f32(right + EFFECT_BLEED)));
+    p.y = Math.max(f32(r.y - EFFECT_BLEED), Math.min(p.y, f32(bottom + EFFECT_BLEED)));
+
+    if (p.alpha > 0) out.push(p);
+  }
+  return out;
+}
+
+/**
+ * The outline treatment for glow, shimmer, pulse and fade at `ms`.
+ * Zeroed for the particle kinds and for none.
+ */
+function effectOutline(fx, ms){
+  const o = {alpha:0, extra:0, highlight:-1, span:0};
+  if (!effectEnabled(fx) || effectParticleKind(fx.kind)) return o;
+
+  const t = f32(ms);
+  const strength = f32(fx.amount / 100);
+  const speed = Math.max(f32(fx.speed), f32(0.1));
+
+  if (fx.kind === 'pulse'){
+    const p = easedFx(f32(t / f32(1700 / speed)));
+    o.alpha = clampi(Math.trunc(f32(f32(120 + f32(135 * p)) * strength)), 0, 255);
+    o.extra = (p > f32(0.6) && strength > f32(0.45)) ? 1 : 0;
+  } else if (fx.kind === 'glow'){
+    const p = easedFx(f32(t / f32(2400 / speed)));
+    o.alpha = clampi(Math.trunc(f32(f32(80 + f32(90 * p)) * strength)), 0, 255);
+  } else if (fx.kind === 'fade'){
+    /* Steady on purpose: the one kind that does not breathe, for a theme that
+       wants presence without movement. */
+    o.alpha = clampi(Math.trunc(f32(110 * strength)), 0, 255);
+  } else if (fx.kind === 'shimmer'){
+    o.alpha = clampi(Math.trunc(f32(210 * strength)), 0, 255);
+    o.highlight = f32(t / f32(2200 / speed)) % 1;
+    o.span = f32(f32(0.1) + f32(f32(0.16) * strength));
+  }
+  return o;
+}
+
+/** Halo radius for glow and fade, in pixels outside the element. */
+function effectHalo(fx, ms){
+  if (!effectEnabled(fx)) return 0;
+  if (fx.kind !== 'glow' && fx.kind !== 'fade') return 0;
+  const strength = f32(fx.amount / 100);
+  let px = f32(6 + f32(14 * strength));
+  if (fx.kind === 'glow'){
+    const speed = Math.max(f32(fx.speed), f32(0.1));
+    px = f32(px * f32(f32(0.75) + f32(f32(0.25) * easedFx(f32(f32(ms) / f32(2400 / speed))))));
+  }
+  return clampi(Math.trunc(px), 0, EFFECT_BLEED);
+}
+
+/* ---- drawing it -----------------------------------------------------------
+   The effect is the one part of the mock that cannot be expressed in CSS: it
+   is per-pixel output of the maths above, so it gets a canvas laid over the
+   screen. Everything below mirrors Canvas::focus_effect in canvas.cpp - the
+   same draw order, the same concentric-ring halo, the same truncating casts to
+   a byte alpha - so what you judge here is what the console draws.
+   --------------------------------------------------------------------------- */
+let sfxEl = null, sfxCtx = null;
+
+/**
+ * The element the client would put the focus ring on, in screen pixels.
+ *
+ * Marked in the mock with data-focus="<corner radius>" rather than found by
+ * class, so a screen says where its focus is instead of this code guessing.
+ * The LAST marker wins: a dialog owns focus while it is up, and it is drawn
+ * over the library it covers.
+ */
+function focusTarget(){
+  const screen = $('screen');
+  if (!screen) return null;
+  const marks = screen.querySelectorAll('[data-focus]');
+  const el = marks[marks.length - 1];
+  if (!el) return null;
+
+  /* offsetLeft/offsetTop, not getBoundingClientRect: the mock is authored at
+     1280x720 and CSS-scaled, and these are the unscaled authored coordinates
+     the maths expects. */
+  let x = 0, y = 0, n = el;
+  while (n && n !== screen){ x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+  if (n !== screen) return null;
+
+  return {x, y, w: el.offsetWidth, h: el.offsetHeight,
+          radius: parseInt(el.getAttribute('data-focus'), 10) || 0};
+}
+
+/** One 1px rounded outline, the shape Canvas::rounded_rect_outline stacks. */
+function fxOutlinePath(ctx, x, y, w, h, rad){
+  const r = Math.max(0, Math.min(rad, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+/** Canvas::rounded_rect_outline: `thickness` concentric 1px outlines. */
+function fxRoundedOutline(ctx, r, radius, color, thickness){
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  for (let i = 0; i < thickness; i++){
+    const o = {x: r.x + i, y: r.y + i, w: r.w - i * 2, h: r.h - i * 2};
+    if (o.w <= 0 || o.h <= 0) break;
+    const rad = Math.max(0, Math.min(radius - i, Math.trunc(o.w / 2), Math.trunc(o.h / 2)));
+    /* The client's last row and column are right()-1 and bottom()-1; the half
+       pixel puts a 1px stroke on the same grid instead of straddling it. */
+    fxOutlinePath(ctx, o.x + 0.5, o.y + 0.5, o.w - 1, o.h - 1, rad);
+  }
+}
+
+function fxCircle(ctx, cx, cy, radius, color){
+  if (radius <= 0) return;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawFocusEffect(ms){
+  if (!sfxCtx) return;
+  sfxCtx.clearRect(0, 0, BG_SCREEN_W, BG_SCREEN_H);
+
+  const fx = state.effect;
+  const r = effectEnabled(fx) ? focusTarget() : null;
+  if (!r || r.w <= 0 || r.h <= 0){ setEffectReadout(null, 0); return; }
+
+  const ctx = sfxCtx;
+  const p = parseHex(c(fx.color || 'focus_ring')) || {r:255, g:255, b:255, a:255};
+  /* The role's own alpha is ignored, as in the client: the effect overwrites
+     it with the alpha its maths produced. */
+  const rgba = a => `rgba(${p.r},${p.g},${p.b},${a / 255})`;
+
+  /* Halo first, so particles and the ring land on top of it. SDL2 has no blur,
+     so the client stacks outlines with falling alpha - and so does this, or the
+     preview would show a soft gradient the console cannot draw. */
+  const halo = effectHalo(fx, ms);
+  if (halo > 0){
+    const o = effectOutline(fx, ms);
+    for (let i = halo; i >= 1; i -= 2){
+      const t = f32(i / halo);
+      const a = Math.trunc(f32(f32(o.alpha * f32(1 - t)) * f32(0.5)));
+      if (a === 0) continue;
+      fxRoundedOutline(ctx, {x:r.x - i, y:r.y - i, w:r.w + i * 2, h:r.h + i * 2},
+                       r.radius + i, rgba(a), 1);
+    }
+  }
+
+  if (effectParticleKind(fx.kind)){
+    const ps = effectParticles(fx, r, ms);
+    ps.forEach(q => fxCircle(ctx, Math.trunc(q.x), Math.trunc(q.y),
+                             Math.trunc(q.radius), rgba(q.alpha)));
+    setEffectReadout(fx, ps.length);
+    return;
+  }
+
+  const o = effectOutline(fx, ms);
+  setEffectReadout(fx, 0);
+  if (o.alpha <= 0) return;
+
+  if (o.highlight >= 0){
+    /* Shimmer: a bright blob travelling the perimeter, its position a fraction
+       clockwise from the top-left, so walk the four edges. */
+    const per = f32(f32(r.w + r.h) * 2);
+    const steps = 7;
+    for (let i = 0; i < steps; i++){
+      const at = f32(o.highlight + f32(f32(f32(i / steps) - f32(0.5)) * o.span));
+      let d = f32(f32(at - Math.floor(at)) * per);
+      let px, py;
+      if (d < r.w)                          { px = r.x + Math.trunc(d); py = r.y; }
+      else if ((d = f32(d - r.w)) < r.h)    { px = r.x + r.w; py = r.y + Math.trunc(d); }
+      else if ((d = f32(d - r.h)) < r.w)    { px = r.x + r.w - Math.trunc(d); py = r.y + r.h; }
+      else                                  { px = r.x; py = r.y + r.h - Math.trunc(f32(d - r.w)); }
+
+      /* Brightest in the middle of the span, faded at both ends. */
+      const edge = f32(1 - f32(Math.abs(f32(f32(i / (steps - 1)) - f32(0.5))) * 2));
+      const a = Math.trunc(f32(o.alpha * edge));
+      if (a) fxCircle(ctx, px, py, 3, rgba(a));
+    }
+    return;
+  }
+
+  /* Glow, pulse and fade all resolve to redrawing the ring heavier. */
+  fxRoundedOutline(ctx, {x:r.x - 3, y:r.y - 3, w:r.w + 6, h:r.h + 6},
+                   r.radius + 3, rgba(o.alpha), 3 + o.extra);
+}
+
+let lastFxReadout = null;
+function setEffectReadout(fx, particles){
+  const el = $('fxInfo');
+  if (!el) return;
+  let txt = '';
+  if (fx && effectParticleKind(fx.kind)){
+    txt = `${particles} particle${particles === 1 ? '' : 's'} · cap ${MAX_EFFECT_PARTICLES}`;
+  } else if (fx && fx.kind === 'fade'){
+    txt = 'steady — no movement';
+  } else if (fx && effectEnabled(fx)){
+    const period = {glow:2400, shimmer:2200, pulse:1700}[fx.kind];
+    txt = `${(period / Math.max(fx.speed, 0.1) / 1000).toFixed(1)}s cycle`;
+  } else if (state.effect.kind !== 'none' && state.effect.amount === 0){
+    txt = 'amount is 0 — nothing is drawn';
+  }
+  if (txt !== lastFxReadout){ el.textContent = txt; lastFxReadout = txt; }
+}
+
 /* ---- the loop -------------------------------------------------------------
    The background lives in its own element that survives a re-render, so
    dragging the speed slider retunes the motion instead of restarting it (and
@@ -1234,6 +1604,10 @@ function animationInUse(){
 
 /** Is there anything for the rAF loop to do? A GIF animates on its own. */
 function motionNeedsLoop(){
+  /* Every effect but fade is a function of time, so it needs the loop even
+     when the theme has no background at all. Fade is steady by design: one
+     draw at render time is the whole of it. */
+  if (effectEnabled(state.effect) && state.effect.kind !== 'fade') return true;
   if (!sbgEl) return false;
   if (state.motion.kind !== 'none' && state.motion.amount > 0) return true;
   return animationInUse() && state.anim.kind === 'sheet';
@@ -1300,6 +1674,7 @@ function motionTick(ts){
   }
   motionLastTs = ts;
   applyMotionFrame(motionClockMs);
+  drawFocusEffect(motionClockMs);
 }
 
 function startMotionLoop(){
@@ -1327,7 +1702,7 @@ function setMotionPlaying(on){
   const b = $('motionPlay');
   if (b) b.textContent = on ? 'Pause motion' : 'Play motion';
   syncMotionLoop();
-  if (!on) applyMotionFrame(motionClockMs);
+  if (!on){ applyMotionFrame(motionClockMs); drawFocusEffect(motionClockMs); }
 }
 
 /* Measure what was actually loaded, so the sheet can be sliced correctly and
@@ -1629,6 +2004,29 @@ function renderChecks(){
     if (p) err(`${field}: "${n}" ${p}.`);
   });
 
+  /* Effects, where the failure is always "it is set but it will not show". */
+  if (state.effect.kind !== 'none' && state.effect.amount === 0){
+    warn(`Focus effect "${state.effect.kind}" has amount 0, so nothing is drawn. ` +
+         `Raise the amount.`);
+  }
+  if (effectEnabled(state.effect)){
+    const role = state.effect.color || 'focus_ring';
+    const fxCol = parseHex(c(role)), surf = parseHex(c('surface_hover'));
+    if (fxCol && surf && contrast(fxCol, surf) < 1.35){
+      warn(`The focus effect draws in "${role}", which is nearly the colour of ` +
+           `the selected row - it will be there and invisible. Pick a role that ` +
+           `stands off the surface.`);
+    }
+    if (effectParticleKind(state.effect.kind)){
+      /* The count the client would produce for a library card: the cap is
+         shared by every element, so a card is the honest place to read it. */
+      const n = effectParticles(state.effect, {x:0, y:0, w:268, h:214}, 0).length;
+      out.push({k:'info', m:`"${state.effect.kind}" draws about ${n} particles ` +
+        `around a library card (the client's ceiling is ${MAX_EFFECT_PARTICLES} ` +
+        `per element) and reaches up to ${EFFECT_BLEED}px outside it.`});
+    }
+  }
+
   if (state.bgm.name && state.bgm.off){
     warn('A music track is chosen but music is also silenced - the track will not play.');
   }
@@ -1653,7 +2051,8 @@ function renderChecks(){
   /* Does this theme change anything at all? */
   if (!changedRoles().length && !state.bg.dataUrl && !state.font.name &&
       !state.mascot.name && !state.bgm.name && !state.bgm.off &&
-      state.anim.kind === 'none' && state.motion.kind === 'none'){
+      state.anim.kind === 'none' && state.motion.kind === 'none' &&
+      state.effect.kind === 'none'){
     warn('This theme changes nothing yet - every colour is the built-in value.');
   }
 
@@ -1737,6 +2136,18 @@ function buildTheme(){
     bg.animation = a;
   }
   if (Object.keys(bg).length) t.background = bg;
+
+  if (state.effect.kind !== 'none'){
+    const focus = {
+      kind: state.effect.kind,
+      speed: Math.round(state.effect.speed * 10) / 10,
+      amount: state.effect.amount
+    };
+    /* Empty means focus_ring, which is what the client falls back to - so an
+       unset colour is left out rather than written as the default. */
+    if (state.effect.color) focus.color = state.effect.color;
+    t.effects = {focus};
+  }
 
   if (state.font.name)   t.font = {file: state.font.name};
   if (state.mascot.name) t.assets = {mascot: state.mascot.name};
@@ -1951,6 +2362,28 @@ function importTheme(text, opts){
       if (typeof a.frames === 'number') state.anim.frames = a.frames;
       if (typeof a.fps === 'number') state.anim.fps = a.fps;
       state.anim.loop = a.loop !== false;
+    }
+  }
+
+  state.effect = {kind:'none', speed:1, amount:40, color:''};
+  if (doc.effects && typeof doc.effects === 'object' &&
+      doc.effects.focus && typeof doc.effects.focus === 'object'){
+    const e = doc.effects.focus;
+    /* Anything the client would refuse is dropped here too, silently and the
+       same way - an editor that accepted a kind the console ignores would show
+       an effect nobody else can see. */
+    if (EFFECT_KINDS.includes(e.kind)) state.effect.kind = e.kind;
+    else if (e.kind !== undefined) unknown.push(`effects.focus.kind: ${JSON.stringify(e.kind)}`);
+
+    /* Speed and amount are CLAMPED, not dropped - that is what the client does
+       with them, and the editor has to show the theme as it will actually run. */
+    if (typeof e.speed === 'number') state.effect.speed = Math.min(8, Math.max(0.1, e.speed));
+    if (typeof e.amount === 'number') state.effect.amount = Math.min(100, Math.max(0, Math.round(e.amount)));
+
+    if (typeof e.color === 'string' && ROLES.some(r => r.k === e.color)){
+      state.effect.color = e.color;
+    } else if (e.color !== undefined){
+      unknown.push(`effects.focus.color: ${JSON.stringify(e.color)} (not a colour role)`);
     }
   }
 
@@ -2556,6 +2989,11 @@ function pushStateToInputs(){
   $('moSpeed').value = state.motion.speed;
   $('moAmount').value = state.motion.amount;
 
+  $('fxKind').value = state.effect.kind;
+  $('fxSpeed').value = state.effect.speed;
+  $('fxAmount').value = state.effect.amount;
+  $('fxColor').value = state.effect.color;
+
   $('anKind').value = state.anim.kind;
   $('anFW').value = state.anim.fw;
   $('anFH').value = state.anim.fh;
@@ -2583,6 +3021,13 @@ function renderAssetLabels(){
   $('bgDimVal').textContent = Number(state.bg.dim).toFixed(2);
   $('moSpeedVal').textContent = Number(state.motion.speed).toFixed(1);
   $('moAmountVal').textContent = state.motion.amount;
+  $('fxSpeedVal').textContent = Number(state.effect.speed).toFixed(1);
+  $('fxAmountVal').textContent = state.effect.amount;
+  /* Fade is the one kind that does not move, so its speed slider would be a
+     control that does nothing. */
+  $('fxSpeed').disabled = state.effect.kind === 'none' || state.effect.kind === 'fade';
+  $('fxAmount').disabled = state.effect.kind === 'none';
+  $('fxColor').disabled  = state.effect.kind === 'none';
   $('bgmVolVal').textContent = Number(state.bgm.volume).toFixed(2);
 
   $('animBox').hidden = state.anim.kind === 'none';
@@ -2646,7 +3091,7 @@ function load(){
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return;
     const s = JSON.parse(raw);
-    ['meta','colors','bg','motion','anim','font','mascot','bgm'].forEach(k => {
+    ['meta','colors','bg','motion','effect','anim','font','mascot','bgm'].forEach(k => {
       if (s && s[k] && typeof s[k] === 'object') Object.assign(state[k], s[k]);
     });
     if (typeof s.screen === 'string') state.screen = s.screen;
@@ -2682,6 +3127,12 @@ function wireAsset(inputId, clearId, key, after){
 
 function init(){
   buildColorList();
+
+  /* The effect colour list is built from ROLES rather than written out, so a
+     role added to the palette cannot be missing from here. Built before
+     pushStateToInputs() below, which has to be able to select one of them. */
+  $('fxColor').innerHTML = '<option value="">focus_ring (default)</option>' +
+    ROLES.map(r => `<option value="${r.k}">${r.k}</option>`).join('');
 
   Object.keys(PRESETS).forEach(name => {
     const o = document.createElement('option');
@@ -2719,6 +3170,13 @@ function init(){
   $('moKind').addEventListener('change', () => { state.motion.kind = $('moKind').value; render(); });
   $('moSpeed').addEventListener('input', () => { state.motion.speed = parseFloat($('moSpeed').value); render(); });
   $('moAmount').addEventListener('input', () => { state.motion.amount = parseInt($('moAmount').value,10); render(); });
+
+  /* Focus effect. */
+  $('fxKind').addEventListener('change', () => { state.effect.kind = $('fxKind').value; render(); });
+  $('fxSpeed').addEventListener('input', () => { state.effect.speed = parseFloat($('fxSpeed').value); render(); });
+  $('fxAmount').addEventListener('input', () => { state.effect.amount = parseInt($('fxAmount').value,10); render(); });
+  $('fxColor').addEventListener('change', () => { state.effect.color = $('fxColor').value; render(); });
+
   $('anKind').addEventListener('change', () => { state.anim.kind = $('anKind').value; render(); });
   [['anFW','fw'],['anFH','fh'],['anFrames','frames'],['anFps','fps']].forEach(([id,k]) => {
     $(id).addEventListener('input', () => {

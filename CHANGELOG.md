@@ -4,6 +4,32 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
+## Unreleased
+
+### Focus effects in the preview
+
+The six effects the client can draw around the selected item — `smoke`,
+`embers`, `glow`, `shimmer`, `pulse` and `fade` — now run in the editor
+preview, on the focused library card, the focused button on the detail screen,
+and the button inside a dialog. They are procedural: no art ships with them and
+they cost no memory, so the only thing to judge is whether they look right,
+which is exactly what a preview is for.
+
+Set through a new **Focus effect** panel: kind, speed, amount, and a colour
+*role* rather than a hex, so the effect moves with the palette instead of being
+the one part of a theme that ignores it. It writes and reads
+`effects.focus` in `theme.json`.
+
+As with motion, the maths is a port of the client's own `theme_effects.cpp` —
+the same hash, the same particle lifetimes, the same clamps — and
+`tests/check-effects.mjs` holds it there: 8606 inputs through both
+implementations, with floats compared as raw 32-bit patterns rather than printed
+decimals, because C and JavaScript break a rounding tie in opposite directions.
+`tests/check-effect-preview.mjs` then checks the pixels: every kind paints, an
+effect that is off paints nothing, and nothing ever reaches more than 26px
+outside the element it decorates, which is the budget the client's renderer
+clips to.
+
 ## 2.1.0
 
 Two editors under one name, and the RomM one grew up.
