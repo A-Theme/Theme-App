@@ -115,6 +115,21 @@
     padding:7px 8px;border-radius:6px;font-size:12.5px;font-family:var(--mono);text-transform:uppercase;
   }
   .crow input.hex.bad{border-color:var(--bad);}
+  /* Alpha. The track is that role's own colour fading into a checker, so the
+     control shows what it does without needing a label next to it. */
+  .crow input.alpha{
+    flex:0 0 78px;-webkit-appearance:none;appearance:none;height:14px;margin:0;
+    border-radius:7px;border:1px solid var(--line);cursor:pointer;background:
+      repeating-conic-gradient(#555 0% 25%, #999 0% 50%) 0 0/8px 8px;
+  }
+  .crow input.alpha::-webkit-slider-thumb{
+    -webkit-appearance:none;width:12px;height:18px;border-radius:4px;
+    background:var(--text-0);border:1px solid var(--bg-0);cursor:pointer;
+  }
+  .crow input.alpha::-moz-range-thumb{
+    width:12px;height:18px;border-radius:4px;
+    background:var(--text-0);border:1px solid var(--bg-0);cursor:pointer;
+  }
   .crow .reset{flex:none;background:none;border:none;color:var(--text-2);cursor:pointer;
     font-size:15px;line-height:1;padding:4px 6px;border-radius:5px;}
   .crow .reset:hover{color:var(--joy-blue);background:var(--bg-2);}
@@ -859,13 +874,23 @@ function buildColorList(){
     hex.spellcheck = false;
     hex.setAttribute('aria-label', role.k + ' hex value');
 
+    /* Every role takes alpha, not only scrim - the renderer blends all of them -
+       so every row gets the slider. A native colour input cannot express alpha
+       at all, and asking an author to hand-edit the last two hex digits is not
+       a transparency control. */
+    const alpha = document.createElement('input');
+    alpha.type = 'range';
+    alpha.className = 'alpha';
+    alpha.min = 0; alpha.max = 255; alpha.step = 1;
+    alpha.setAttribute('aria-label', role.k + ' opacity');
+
     const reset = document.createElement('button');
     reset.className = 'reset';
     reset.type = 'button';
     reset.title = 'Reset ' + role.k + ' to the built-in value';
     reset.textContent = '↻';
 
-    row.append(sw, name, hex, reset);
+    row.append(sw, name, hex, alpha, reset);
     host.appendChild(row);
 
     picker.addEventListener('input', () => {
@@ -874,6 +899,12 @@ function buildColorList(){
       /* Keep any alpha the role already had - picking a colour should not
          silently make a translucent scrim opaque. */
       state.colors[role.k] = toHex({r:p.r, g:p.g, b:p.b, a:cur.a});
+      render();
+    });
+    alpha.addEventListener('input', () => {
+      const cur = parseHex(state.colors[role.k]) || parseHex(DEFAULTS[role.k]);
+      state.colors[role.k] = toHex({r:cur.r, g:cur.g, b:cur.b,
+                                    a: parseInt(alpha.value, 10)});
       render();
     });
     hex.addEventListener('input', () => {
@@ -901,6 +932,18 @@ function syncColorInputs(skip){
     row.querySelector('input[type=color]').value =
       '#' + h2(c.r) + h2(c.g) + h2(c.b);
     if (k !== skip) row.querySelector('input.hex').value = val;
+
+    const alpha = row.querySelector('input.alpha');
+    alpha.value = c.a;
+    alpha.title = `${k} opacity ${Math.round(c.a / 255 * 100)}%` +
+                  (c.a === 255 ? ' (opaque)' : '');
+    /* The track runs from fully transparent to this role's own colour, over the
+       same checker the swatch uses. */
+    alpha.style.backgroundImage =
+      `linear-gradient(to right, ${cssRgba({r:c.r, g:c.g, b:c.b, a:0})}, ` +
+      `${cssRgba({r:c.r, g:c.g, b:c.b, a:255})}),` +
+      'repeating-conic-gradient(#555 0% 25%, #999 0% 50%)';
+    alpha.style.backgroundSize = '100% 100%, 8px 8px';
     /* Checker behind the swatch so alpha reads as transparency. */
     row.querySelector('.swatch').style.background =
       `linear-gradient(${cssRgba(c)},${cssRgba(c)}),` +

@@ -6,6 +6,19 @@ one place release notes are written.
 
 ## Unreleased
 
+### Transparency on a slider
+
+Every colour row now has an opacity slider beside its hex box. Every role takes
+alpha in this client — the renderer blends all of them, not just `scrim` — but
+a native colour input cannot express alpha, so until now the only way to make a
+surface translucent was to hand-type two hex digits on the end of the value.
+
+The slider's track runs from clear to that role's own colour over a checker, so
+it shows what it does without a label. Dragging to full opacity writes six hex
+digits rather than `#RRGGBBFF`, so an opaque role stays equal to its default
+instead of showing up as changed in all 19 rows, and picking a new hue keeps
+whatever alpha the role already had rather than quietly making it opaque.
+
 ### Focus effects in the preview
 
 The six effects the client can draw around the selected item — `smoke`,

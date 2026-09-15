@@ -51,3 +51,14 @@ effect while dropping exactly what the client would drop.
 ```bash
 node tests/check-effect-preview.mjs
 ```
+
+## `check-color-alpha.mjs`
+
+The per-role opacity slider, and the two quiet ways it could go wrong: writing
+`#RRGGBBFF` at full opacity (which would mark all 19 roles changed against
+their 6-digit defaults and bloat every exported theme), and a colour picker that
+drops the alpha, silently making a translucent surface opaque.
+
+```bash
+node tests/check-color-alpha.mjs
+```

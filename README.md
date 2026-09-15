@@ -299,7 +299,7 @@ a Tinfoil theme:
 
 | | |
 |---|---|
-| **19 colour roles** | semantic, not raw slots — `bg`, `surface_raised`, `accent`, `focus_ring`, `danger`… |
+| **19 colour roles** | semantic, not raw slots — `bg`, `surface_raised`, `accent`, `focus_ring`, `danger`… — each with its own opacity slider |
 | **Background** | a 1280×720 image with a `dim` control, plus free `drift`/`pan`/`zoom` motion |
 | **Animated background** | sprite sheets (cheap — one texture) or animated GIF, inside a 48 MB texture budget |
 | **Font** | a `.ttf`/`.otf` replacing the UI face at all five sizes |
@@ -324,6 +324,12 @@ What the editor does for you:
   approximation would be worse than none, looking authoritative while being wrong.
   [`tests/check-motion.mjs`](tests/check-motion.mjs) holds it to that: 6336 inputs
   through both implementations, byte-identical output required.
+- **Transparency on a slider, per role.** Every role takes alpha in this client
+  — the renderer blends all of them, not just `scrim` — so every colour row has
+  an opacity slider next to its hex box. The track runs from clear to that
+  role's own colour over a checker, so the control shows what it does. A native
+  colour input cannot express alpha at all, and hand-editing the last two hex
+  digits is not a transparency control.
 - **Focus effects, previewed the same way.** The six kinds the client can draw
   around whatever is selected — `smoke`, `embers`, `glow`, `shimmer`, `pulse`,
   `fade` — run live on the focused card, the focused button, the button in a
