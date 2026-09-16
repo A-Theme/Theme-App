@@ -2,20 +2,20 @@
 
 <img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/header.png" alt="Aramaki's Theme Editor - for Tinfoil and the RomM Switch client" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=660&lines=Two+editors.+Two+apps.+One+page.;No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Export+a+ready-to-use+pack+in+one+click.)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=660&lines=Theme+the+RomM+Switch+client%2C+visually.;Two+editors.+Two+apps.+One+page.;No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Export+a+ready-to-use+pack+in+one+click.)](https://git.io/typing-svg)
 
-[![Tinfoil editor](https://img.shields.io/badge/editor-Tinfoil-ff3c50?style=for-the-badge)](tinfoil-theme-editor.html)
 [![RomM editor](https://img.shields.io/badge/editor-RomM%20client-4C8DFF?style=for-the-badge)](romm-theme-editor.html)
+[![Tinfoil editor](https://img.shields.io/badge/editor-Tinfoil-ff3c50?style=for-the-badge)](tinfoil-theme-editor.html)
 [![Runs in Browser](https://img.shields.io/badge/runs%20in-browser-00c2ff?style=for-the-badge)](#-quick-start)
 [![Desktop App](https://img.shields.io/badge/windows-desktop%20app-9d4edd?style=for-the-badge)](#-desktop-app)
 [![Mobile Friendly](https://img.shields.io/badge/android%20%26%20ios-friendly-5be27a?style=for-the-badge)](#-mobile-android--ios)
 [![License: MIT](https://img.shields.io/badge/license-MIT-8A6BFF?style=for-the-badge)](#-license)
 
+[RomM Editor](#-the-romm-theme-editor) •
 [Quick Start](#-quick-start) •
 [Features](#-features) •
-[How to Use](#-how-to-use) •
-[Supported Format](#-supported-theme-format) •
-[RomM Editor](#-also-here-the-romm-theme-editor) •
+[Tinfoil: How to Use](#-how-to-use-tinfoil-editor) •
+[Tinfoil: Format](#-supported-theme-format-tinfoil) •
 [Desktop App](#-desktop-app) •
 [Mobile](#-mobile-android--ios) •
 [On-Console](#-on-console-installer) •
@@ -32,25 +32,106 @@ theming two different Switch apps. No hand-editing raw JSON and guessing what a
 colour or path field does: load a theme, tweak every field through a proper UI,
 preview it live, export it back out.
 
-| editor | themes | file |
-|---|---|---|
-| **[Tinfoil Theme Editor](tinfoil-theme-editor.html)** | [Tinfoil](https://github.com/Huntereb/Tinfoil), the Switch shop app | `settings.json` |
-| **[RomM Theme Editor](romm-theme-editor.html)** | the RomM Switch client, an SDL2 homebrew app | `theme.json` |
+| editor | themes | file | |
+|---|---|---|---|
+| **[RomM Theme Editor](romm-theme-editor.html)** | the RomM Switch client, an SDL2 homebrew app | `theme.json` | **where the work is** |
+| **[Tinfoil Theme Editor](tinfoil-theme-editor.html)** | [Tinfoil](https://github.com/Huntereb/Tinfoil), the Switch shop app | `settings.json` | maintained |
 
 [`index.html`](index.html) is a launcher offering both — it is what the desktop
 app opens. Each editor also carries its **own** web manifest, so they install as
 two separate apps and can sit side by side on a home screen.
 
-The Tinfoil one was built alongside the [A-Theme Tinfoil theme collection](https://github.com/A-Theme/Tinfoil-Themes);
-the RomM one alongside [RomM-Themes](https://github.com/A-Theme/RomM-Themes).
-Most of this README describes the Tinfoil editor, since it is the older and
-larger of the two — the RomM editor has [its own section](#-also-here-the-romm-theme-editor).
+The RomM one was built alongside [RomM-Themes](https://github.com/A-Theme/RomM-Themes),
+the Tinfoil one alongside the [A-Theme Tinfoil theme collection](https://github.com/A-Theme/Tinfoil-Themes).
+
+**Start with the [RomM editor](#-the-romm-theme-editor)** — the RomM client is
+what most theming happens on now, and that editor is where new work lands. The
+Tinfoil editor came first and is the larger of the two, so most of the sections
+below still describe it; it is maintained and still does everything it did, but
+Tinfoil itself has largely been overtaken.
 
 Everything runs **entirely in your browser (or as a standalone desktop app)** — no server, no account, no build step. The editor never uploads your work anywhere; the only time a file leaves your machine is if *you* choose to submit a theme to the public collection, and even then your browser hands it straight to GitHub.
+
+## 🟢 The RomM Theme Editor
+
+[`romm-theme-editor.html`](romm-theme-editor.html) themes the **RomM Switch
+client**, an SDL2 homebrew app. It installs as its own app (its own
+[`manifest-romm.json`](manifest-romm.json)), so both editors can sit side by side
+on a home screen.
+
+A RomM theme is a folder with a `theme.json` in it, and changes a lot more than a
+Tinfoil theme:
+
+| | |
+|---|---|
+| **19 colour roles** | semantic, not raw slots — `bg`, `surface_raised`, `accent`, `focus_ring`, `danger`… — each with its own opacity slider |
+| **Background** | a 1280×720 image with a `dim` control, plus free `drift`/`pan`/`zoom` motion |
+| **Animated background** | sprite sheets (cheap — one texture) or animated GIF, inside a 48 MB texture budget — built with [`spritesheet-maker`](https://github.com/A-Theme/RomM-Themes/tree/main/tools/spritesheet-maker), which packs a sheet the client can actually read and writes the matching `theme.json` block |
+| **Font** | a `.ttf`/`.otf` replacing the UI face at all five sizes |
+| **Mascot** | swap the Borb art |
+| **Focus effect** | smoke, embers, glow, shimmer, pulse or fade around the selected item — procedural, so no art and no memory |
+| **Music** | MP3, OGG, Opus, FLAC, and tracker modules (`.mod`/`.xm`/`.it`/`.s3m`) |
+
+What the editor does for you:
+
+- **Browse the published catalog** — it reads the same `manifest.json` the console
+  reads and lists every theme in
+  [RomM-Themes](https://github.com/A-Theme/RomM-Themes), with what each one changes.
+  Opening one pulls its background, font, mascot and music down too, so the quickest
+  way to start a new theme is usually to open the nearest existing one and change it.
+- **Live preview of the real screens** — library, detail and a dialog, drawn at the
+  console's actual 1280×720 with true relative type sizes. It stays pinned while
+  you scroll the colour list.
+- **Motion and animation that actually play.** `drift`, `pan` and `zoom` move, sprite
+  sheets step through their frames, and moving a slider retunes it live. The
+  arithmetic is a port of the client's own `theme_motion.cpp` — same triangle wave,
+  same easing, same grow-before-translate — because a preview running its own
+  approximation would be worse than none, looking authoritative while being wrong.
+  [`tests/check-motion.mjs`](tests/check-motion.mjs) holds it to that: 6336 inputs
+  through both implementations, byte-identical output required.
+- **Transparency on a slider, per role.** Every role takes alpha in this client
+  — the renderer blends all of them, not just `scrim` — so every colour row has
+  an opacity slider next to its hex box. The track runs from clear to that
+  role's own colour over a checker, so the control shows what it does. A native
+  colour input cannot express alpha at all, and hand-editing the last two hex
+  digits is not a transparency control.
+- **Focus effects, previewed the same way.** The six kinds the client can draw
+  around whatever is selected — `smoke`, `embers`, `glow`, `shimmer`, `pulse`,
+  `fade` — run live on the focused card, the focused button, the button in a
+  dialog. They are procedural: no art ships with them and they cost no memory.
+  The maths is a port of the client's `theme_effects.cpp`, held to the same
+  standard as motion by [`tests/check-effects.mjs`](tests/check-effects.mjs) —
+  8606 inputs, bit-identical floats required — and
+  [`tests/check-effect-preview.mjs`](tests/check-effect-preview.mjs) checks the
+  pixels that reach the canvas, including that nothing ever reaches more than
+  26px outside the element it decorates.
+- **20 starting palettes**, each setting all 19 roles and contrast-checked before
+  it ships, so a palette is a safe base rather than a swatch dump you then have to
+  make legible.
+- **Readability checks** — WCAG contrast for body text on all three surfaces, and a
+  hard warning when `focus_ring` blends into the card it outlines. A cursor nobody
+  can see is the single easiest way to ruin a theme.
+- **A live memory budget** — one 720p frame is 3.6 MB of texture, so an animated
+  background is budgeted. The meter shows exactly what your settings cost, and an
+  animation over budget falls back to the still image in the preview, because that
+  is what the client does with it.
+- **Import a folder, a `.zip` pack, or a bare `theme.json`**; **export** the JSON or
+  a ready-to-drop `.zip` pack with every asset in it. Prefer the folder or the pack:
+  a `theme.json` only *names* its background, so importing one on its own gives you
+  colours and five dangling references.
+
+Drop the unzipped folder into `sdmc:/switch/romm-client/themes/` and pick it in
+**Settings → Theme** on the console. Themes live in
+[**RomM-Themes**](https://github.com/A-Theme/RomM-Themes), which validates every
+submission against the same rules the client enforces.
+
+---
 
 ---
 
 ## ⚡ At a glance
+
+*(the Tinfoil editor — the RomM editor is [above](#-the-romm-theme-editor))*
 
 <table>
 <tr>
@@ -113,7 +194,7 @@ No build step. No dependencies. No install. It's one HTML file.
 
 ---
 
-## 📖 How to Use
+## 📖 How to Use (Tinfoil editor)
 
 ### Loading a theme
 You can get a theme into the editor four ways:
@@ -162,7 +243,7 @@ All you need is a free GitHub account; there are no tokens to create or settings
 
 ---
 
-## 🧬 Supported Theme Format
+## 🧬 Supported Theme Format (Tinfoil)
 
 This editor targets Tinfoil's theme config schema — the `settings.json` Tinfoil reads from each theme folder — structured like:
 
@@ -286,82 +367,6 @@ It's had real hardware testing and several rounds of fixes already. What it can 
 
 ---
 
-## 🎨 Also here: the RomM Theme Editor
-
-This repo now hosts a **second** editor: [`romm-theme-editor.html`](romm-theme-editor.html),
-for theming the **RomM Switch client** rather than Tinfoil. Same idea, same house
-style, separate file — and it installs as its own app (its own
-[`manifest-romm.json`](manifest-romm.json)), so both editors can live side by side
-on your home screen.
-
-A RomM theme is a folder with a `theme.json` in it, and can change a lot more than
-a Tinfoil theme:
-
-| | |
-|---|---|
-| **19 colour roles** | semantic, not raw slots — `bg`, `surface_raised`, `accent`, `focus_ring`, `danger`… — each with its own opacity slider |
-| **Background** | a 1280×720 image with a `dim` control, plus free `drift`/`pan`/`zoom` motion |
-| **Animated background** | sprite sheets (cheap — one texture) or animated GIF, inside a 48 MB texture budget |
-| **Font** | a `.ttf`/`.otf` replacing the UI face at all five sizes |
-| **Mascot** | swap the Borb art |
-| **Focus effect** | smoke, embers, glow, shimmer, pulse or fade around the selected item — procedural, so no art and no memory |
-| **Music** | MP3, OGG, Opus, FLAC, and tracker modules (`.mod`/`.xm`/`.it`/`.s3m`) |
-
-What the editor does for you:
-
-- **Browse the published catalog** — it reads the same `manifest.json` the console
-  reads and lists every theme in
-  [RomM-Themes](https://github.com/A-Theme/RomM-Themes), with what each one changes.
-  Opening one pulls its background, font, mascot and music down too, so the quickest
-  way to start a new theme is usually to open the nearest existing one and change it.
-- **Live preview of the real screens** — library, detail and a dialog, drawn at the
-  console's actual 1280×720 with true relative type sizes. It stays pinned while
-  you scroll the colour list.
-- **Motion and animation that actually play.** `drift`, `pan` and `zoom` move, sprite
-  sheets step through their frames, and moving a slider retunes it live. The
-  arithmetic is a port of the client's own `theme_motion.cpp` — same triangle wave,
-  same easing, same grow-before-translate — because a preview running its own
-  approximation would be worse than none, looking authoritative while being wrong.
-  [`tests/check-motion.mjs`](tests/check-motion.mjs) holds it to that: 6336 inputs
-  through both implementations, byte-identical output required.
-- **Transparency on a slider, per role.** Every role takes alpha in this client
-  — the renderer blends all of them, not just `scrim` — so every colour row has
-  an opacity slider next to its hex box. The track runs from clear to that
-  role's own colour over a checker, so the control shows what it does. A native
-  colour input cannot express alpha at all, and hand-editing the last two hex
-  digits is not a transparency control.
-- **Focus effects, previewed the same way.** The six kinds the client can draw
-  around whatever is selected — `smoke`, `embers`, `glow`, `shimmer`, `pulse`,
-  `fade` — run live on the focused card, the focused button, the button in a
-  dialog. They are procedural: no art ships with them and they cost no memory.
-  The maths is a port of the client's `theme_effects.cpp`, held to the same
-  standard as motion by [`tests/check-effects.mjs`](tests/check-effects.mjs) —
-  8606 inputs, bit-identical floats required — and
-  [`tests/check-effect-preview.mjs`](tests/check-effect-preview.mjs) checks the
-  pixels that reach the canvas, including that nothing ever reaches more than
-  26px outside the element it decorates.
-- **20 starting palettes**, each setting all 19 roles and contrast-checked before
-  it ships, so a palette is a safe base rather than a swatch dump you then have to
-  make legible.
-- **Readability checks** — WCAG contrast for body text on all three surfaces, and a
-  hard warning when `focus_ring` blends into the card it outlines. A cursor nobody
-  can see is the single easiest way to ruin a theme.
-- **A live memory budget** — one 720p frame is 3.6 MB of texture, so an animated
-  background is budgeted. The meter shows exactly what your settings cost, and an
-  animation over budget falls back to the still image in the preview, because that
-  is what the client does with it.
-- **Import a folder, a `.zip` pack, or a bare `theme.json`**; **export** the JSON or
-  a ready-to-drop `.zip` pack with every asset in it. Prefer the folder or the pack:
-  a `theme.json` only *names* its background, so importing one on its own gives you
-  colours and five dangling references.
-
-Drop the unzipped folder into `sdmc:/switch/romm-client/themes/` and pick it in
-**Settings → Theme** on the console. Themes live in
-[**RomM-Themes**](https://github.com/A-Theme/RomM-Themes), which validates every
-submission against the same rules the client enforces.
-
----
-
 ## 📜 License
 
 MIT — do whatever you'd like with it.
@@ -372,10 +377,11 @@ MIT — do whatever you'd like with it.
 
 <div align="center">
 
+[![RomM-Themes](https://img.shields.io/badge/RomM--Themes-romm%20theme%20database-5be27a?style=for-the-badge)](https://github.com/A-Theme/RomM-Themes)
+[![spritesheet-maker](https://img.shields.io/badge/spritesheet--maker-animated%20backgrounds-8A6BFF?style=for-the-badge)](https://github.com/A-Theme/RomM-Themes/tree/main/tools/spritesheet-maker)
 [![Theme-App](https://img.shields.io/badge/Theme--App-visual%20editor-00c2ff?style=for-the-badge)](https://github.com/A-Theme/Theme-App)
 [![Tinfoil-Themes](https://img.shields.io/badge/Tinfoil--Themes-theme%20database-ff3c50?style=for-the-badge)](https://github.com/A-Theme/Tinfoil-Themes)
 [![Switch-Theme-Installer](https://img.shields.io/badge/Switch--Theme--Installer-on--console%20installer-9d4edd?style=for-the-badge)](https://github.com/A-Theme/Switch-Theme-Installer)
-[![RomM-Themes](https://img.shields.io/badge/RomM--Themes-romm%20theme%20database-5be27a?style=for-the-badge)](https://github.com/A-Theme/RomM-Themes)
 
 [![A-Theme](https://img.shields.io/badge/A--Theme-org-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/A-Theme)
 [![Website](https://img.shields.io/badge/Web-a--theme.ca-e60012?style=for-the-badge&logo=googlechrome&logoColor=white)](https://a-theme.ca)
