@@ -129,6 +129,30 @@ submission against the same rules the client enforces.
 
 ---
 
+## 📸 What it looks like
+
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/screenshots/romm-theme-editor.png" width="100%" alt="The RomM theme editor: colour roles on the left, a live preview of the client's library screen on the right, and a checks panel listing what is wrong with the theme so far"/>
+
+<sub><b>RomM editor</b> — 19 colour roles, a live preview of the client's own screens, and checks that name what is still wrong.</sub>
+
+<br/><br/>
+
+<img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/screenshots/tinfoil-theme-editor.png" width="100%" alt="The Tinfoil theme editor with a community theme loaded: a live Switch UI preview, every colour field as a swatch, and a readability panel scoring each pair"/>
+
+<sub><b>Tinfoil editor</b> — every field as a swatch over a live Switch UI preview, with a readability panel scoring each pair it can.</sub>
+
+<br/><br/>
+
+<img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/screenshots/index.png" width="100%" alt="The launcher page offering the Tinfoil editor and the RomM editor side by side"/>
+
+<sub><b>index.html</b> — the launcher the desktop app opens.</sub>
+
+</div>
+
+---
+
 ## ⚡ At a glance
 
 *(the Tinfoil editor — the RomM editor is [above](#-the-romm-theme-editor))*
