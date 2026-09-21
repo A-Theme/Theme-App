@@ -4,6 +4,25 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
+## Unreleased
+
+- **Eleven border treatments.** The client gained focus effects that replace
+  the ring rather than decorating it — `ring`, `runner`, `gradient`,
+  `notched`, `ticks`, `breathe`, `rails`, `sidebar`, `brackets`,
+  `inner_glow`, `lift` — and the editor now offers all of them and previews
+  them live. The kind picker groups them apart from the six that decorate the
+  ring, because they behave differently: the standard focus ring is not drawn
+  over a border treatment.
+- The effect parity test grew from 8606 rows to 16133, covering the border
+  geometry as well: the inward normals, each point's segment, the per-kind
+  cycle period, and `amount` mapped onto each kind's own range. Two float
+  divergences it caught are worth knowing about — the C++ rounds a multiply to
+  float before adding where JavaScript would keep double precision throughout,
+  and it uses a 14-digit pi literal rather than `Math.PI`, which matters when
+  the result is `sin(180°)` and the whole value is rounding error.
+- Both test grids are now walked from the kind table instead of a hand-written
+  list, so a kind added to either side is compared without anyone remembering.
+
 ## 2.2.0
 
 ### Transparency on a slider

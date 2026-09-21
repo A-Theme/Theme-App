@@ -69,7 +69,7 @@ Tinfoil theme:
 | **Animated background** | sprite sheets (cheap — one texture) or animated GIF, inside a 48 MB texture budget — built with [`spritesheet-maker`](https://github.com/A-Theme/RomM-Themes/tree/main/tools/spritesheet-maker), which packs a sheet the client can actually read and writes the matching `theme.json` block |
 | **Font** | a `.ttf`/`.otf` replacing the UI face at all five sizes |
 | **Mascot** | swap the Borb art |
-| **Focus effect** | smoke, embers, glow, shimmer, pulse or fade around the selected item — procedural, so no art and no memory |
+| **Focus effect** | 17 kinds around the selected item — particles, outline treatments, and eleven border treatments that replace the ring — procedural, so no art and no memory |
 | **Music** | MP3, OGG, Opus, FLAC, and tracker modules (`.mod`/`.xm`/`.it`/`.s3m`) |
 
 What the editor does for you:
@@ -95,13 +95,18 @@ What the editor does for you:
   role's own colour over a checker, so the control shows what it does. A native
   colour input cannot express alpha at all, and hand-editing the last two hex
   digits is not a transparency control.
-- **Focus effects, previewed the same way.** The six kinds the client can draw
-  around whatever is selected — `smoke`, `embers`, `glow`, `shimmer`, `pulse`,
-  `fade` — run live on the focused card, the focused button, the button in a
-  dialog. They are procedural: no art ships with them and they cost no memory.
-  The maths is a port of the client's `theme_effects.cpp`, held to the same
-  standard as motion by [`tests/check-effects.mjs`](tests/check-effects.mjs) —
-  8606 inputs, bit-identical floats required — and
+- **Focus effects, previewed the same way.** Every kind the client can draw
+  around whatever is selected runs live on the focused card, the focused
+  button, the button in a dialog. Two are particles (`smoke`, `embers`), four
+  light the focus ring (`glow`, `shimmer`, `pulse`, `fade`), and eleven
+  **replace** it — `ring`, `runner`, `gradient`, `notched`, `ticks`,
+  `breathe`, `rails`, `sidebar`, `brackets`, `inner_glow`, `lift` — so the
+  standard ring is not drawn over them. They are procedural: no art ships with
+  them and they cost no memory.
+  The maths is a port of the client's `theme_effects.cpp` and its border
+  geometry, held to the same standard as motion by
+  [`tests/check-effects.mjs`](tests/check-effects.mjs) —
+  16133 inputs, bit-identical floats required — and
   [`tests/check-effect-preview.mjs`](tests/check-effect-preview.mjs) checks the
   pixels that reach the canvas, including that nothing ever reaches more than
   26px outside the element it decorates.

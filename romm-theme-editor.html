@@ -378,6 +378,19 @@
               <option value="shimmer">shimmer &mdash; highlight running the border</option>
               <option value="pulse">pulse &mdash; the ring breathes</option>
               <option value="fade">fade &mdash; steady soft halo, no movement</option>
+              <optgroup label="Border treatments &mdash; these replace the focus ring">
+              <option value="ring">ring &mdash; the built-in ring, by name</option>
+              <option value="runner">runner &mdash; a bright segment orbiting</option>
+              <option value="gradient">gradient &mdash; two colours travelling</option>
+              <option value="notched">notched &mdash; broken at each edge's middle</option>
+              <option value="ticks">ticks &mdash; tick marks stepping around</option>
+              <option value="breathe">breathe &mdash; the thickness pulsing</option>
+              <option value="rails">rails &mdash; top and bottom rules only</option>
+              <option value="sidebar">sidebar &mdash; a marker on the leading edge</option>
+              <option value="brackets">brackets &mdash; corner arms</option>
+              <option value="inner_glow">inner_glow &mdash; falloff inside the shape</option>
+              <option value="lift">lift &mdash; drop shadow under, light on top</option>
+              </optgroup>
             </select></div>
           <div class="field"><label for="fxSpeed">Speed</label>
             <input type="range" id="fxSpeed" min="0.1" max="8" step="0.1" value="1">
@@ -1305,7 +1318,31 @@ function sheetSource(anim, frame, sheetW, sheetH){
    from i and t, never stepped - which is why the preview can jump the clock,
    pause, or rebuild the DOM without the effect drifting out of sync.
    --------------------------------------------------------------------------- */
-const EFFECT_KINDS = ['none','smoke','embers','glow','shimmer','pulse','fade'];
+const EFFECT_KINDS = ['none','smoke','embers','glow','shimmer','pulse','fade',
+                     'ring','runner','gradient','notched','ticks','breathe',
+                     'rails','sidebar','brackets','inner_glow','lift'];
+
+/* The eleven from 'ring' on REPLACE the focus ring rather than decorating it,
+   so the client's focus_ring() draws no ring of its own over them. Mirrors
+   ThemeEffect::replaces_outline() in theme_spec.h. */
+const effectReplacesOutline = k => EFFECT_KINDS.indexOf(k) >= EFFECT_KINDS.indexOf('ring');
+
+/* One cycle at speed 1.0, in ms. Mirrors effect_period_ms() in
+   theme_effects.cpp; 0 means the kind is steady or runs per-particle. */
+const EFFECT_PERIOD = {
+  none:0, smoke:0, embers:0, fade:0, lift:0,
+  ticks:1200, ring:1600, notched:1600, brackets:1600, pulse:1700,
+  runner:1800, breathe:1900, rails:2000, sidebar:2000, inner_glow:2000,
+  shimmer:2200, glow:2400, gradient:3600
+};
+const effectPeriodMs = k => EFFECT_PERIOD[k] || 0;
+
+/* amount onto a kind's own range. The client clamps the field to 0-100, so
+   this divides by 100: 65 means 65% of the range, not "about half". */
+function effectAmountScaled(amount, lo, hi){
+  const t = f32(Math.min(1, Math.max(0, amount / 100)));
+  return lo + Math.round(f32((hi - lo) * t));
+}
 const EFFECT_BLEED = 26;          // kEffectBleed
 const MAX_EFFECT_PARTICLES = 48;  // kMaxEffectParticles
 
@@ -1531,6 +1568,250 @@ function fxCircle(ctx, cx, cy, radius, color){
   ctx.fill();
 }
 
+/* ---------------------------------------------------------------------------
+   Border treatments
+
+   A port of Canvas::focus_border in canvas.cpp, standing on border_points()
+   from theme_effects.cpp. The normals are the point: thickness grows along
+   the inward normal, never toward the rect's centre, or the top edge of a
+   wide row thickens sideways along itself and the whole thing renders as
+   broken dashes.
+   --------------------------------------------------------------------------- */
+const BORDER_ARC_STEPS = 24;
+
+function borderPoints(r, radius){
+  const out = [];
+  if (r.w <= 0 || r.h <= 0) return out;
+  const rad = Math.max(0, Math.min(radius, Math.min(Math.trunc(r.w / 2),
+                                                    Math.trunc(r.h / 2))));
+  const sw = Math.max(0, r.w - rad * 2), sh = Math.max(0, r.h - rad * 2);
+
+  const straight = (seg, x0, y0, dx, dy, nx, ny, n) => {
+    for (let k = 0; k < n; k++){
+      out.push({x:f32(x0 + f32(dx * k)), y:f32(y0 + f32(dy * k)), nx, ny,
+                u:f32(k / Math.max(1, n)), segment:seg, straight:true});
+    }
+  };
+  const arc = (seg, a0, a1, cx, cy) => {
+    for (let k = 0; k < BORDER_ARC_STEPS; k++){
+      /* The C++ literal, not Math.PI. They differ in the last place, and
+         sin(180 degrees) is near enough zero that the difference is the
+         whole value: -3e-15 against -1.2e-16. */
+      const a = (a0 + (a1 - a0) * k / BORDER_ARC_STEPS) * 3.14159265358979 / 180;
+      const ca = f32(Math.cos(a)), sa = f32(Math.sin(a));
+      /* Rounded after the multiply AND after the add, because the C++ does:
+         `cx + static_cast<float>(rad) * ca` is a float multiply feeding a
+         float add, two roundings. Doing it all in double and rounding once
+         lands 1 ULP out on a third of the arc points. */
+      out.push({x:f32(cx + f32(rad * ca)), y:f32(cy + f32(rad * sa)),
+                nx:f32(-ca), ny:f32(-sa),
+                u:f32(k / BORDER_ARC_STEPS), segment:seg, straight:false});
+    }
+  };
+
+  const right = r.x + r.w - 1, bottom = r.y + r.h - 1;
+  straight(0, r.x + rad, r.y, 1, 0, 0, 1, sw);
+  arc(1, -90, 0, right - rad, r.y + rad);
+  straight(2, right, r.y + rad, 0, 1, -1, 0, sh);
+  arc(3, 0, 90, right - rad, bottom - rad);
+  straight(4, right - rad, bottom, -1, 0, 0, -1, sw);
+  arc(5, 90, 180, r.x + rad, bottom - rad);
+  straight(6, r.x, bottom - rad, 0, -1, 1, 0, sh);
+  arc(7, 180, 270, r.x + rad, r.y + rad);
+  return out;
+}
+
+/* Row extent of the rounded shape, for the kinds that fill inward. */
+function shapeRow(r, radius, y){
+  if (r.w <= 0 || r.h <= 0) return null;
+  if (y < r.y || y >= r.y + r.h) return null;
+  const rad = Math.max(0, Math.min(radius, Math.min(Math.trunc(r.w / 2),
+                                                    Math.trunc(r.h / 2))));
+  let inset = 0;
+  if (rad > 0){
+    const cut = d => d >= rad ? 0
+      : rad - Math.trunc(Math.sqrt(rad * rad - (rad - d) * (rad - d)));
+    if (y < r.y + rad)                  inset = cut(y - r.y);
+    else if (y >= r.y + r.h - rad)      inset = cut(r.y + r.h - 1 - y);
+  }
+  const x0 = r.x + inset, x1 = r.x + r.w - 1 - inset;
+  return x1 >= x0 ? {x0, x1} : null;
+}
+
+const fxPhase  = (fx, ms, period) => {
+  const per = Math.max(1, period / Math.max(0.1, fx.speed));
+  return f32((ms % per) / per);
+};
+const fxBreath = (fx, ms, period) => {
+  const ph = fxPhase(fx, ms, period);
+  const tri = ph < 0.5 ? ph * 2 : (1 - ph) * 2;
+  return f32(0.5 - 0.5 * Math.cos(tri * 3.14159265));   // the float literal the C++ uses
+};
+
+function drawBorderTreatment(ctx, fx, r, ms, p){
+  const rgba = (col, a) => `rgba(${col.r},${col.g},${col.b},${Math.max(0, Math.min(255, a)) / 255})`;
+  const bright = col => ({r:Math.min(255, col.r + 70), g:Math.min(255, col.g + 70),
+                          b:Math.min(255, col.b + 70)});
+  const mix = (a, b, t) => {
+    t = Math.max(0, Math.min(1, t));
+    return {r:Math.trunc(a.r + (b.r - a.r) * t), g:Math.trunc(a.g + (b.g - a.g) * t),
+            b:Math.trunc(a.b + (b.b - a.b) * t)};
+  };
+  const stamp = (pt, col, a, thick) => {
+    for (let t = 0; t < thick; t++){
+      ctx.fillStyle = rgba(col, a);
+      ctx.fillRect(Math.round(pt.x + pt.nx * t), Math.round(pt.y + pt.ny * t), 1, 1);
+    }
+  };
+  const period = effectPeriodMs(fx.kind);
+  const o = {x:r.x - 3, y:r.y - 3, w:r.w + 6, h:r.h + 6};
+  const rr = r.radius + 3;
+  const amt = (lo, hi) => effectAmountScaled(fx.amount, lo, hi);
+
+  switch (fx.kind){
+    case 'ring': {
+      const t = Math.max(1, amt(1, 5));
+      fxRoundedOutline(ctx, {x:r.x - t, y:r.y - t, w:r.w + t * 2, h:r.h + t * 2},
+                       r.radius + t, rgba(mix(p, bright(p), fxBreath(fx, ms, period)), 255), t);
+      break;
+    }
+    case 'runner': {
+      fxRoundedOutline(ctx, o, rr, rgba(p, 90), 3);
+      const pts = borderPoints(o, rr);
+      if (!pts.length) break;
+      const head = fxPhase(fx, ms, period) * pts.length;
+      const span = Math.max(1, Math.trunc(pts.length * amt(8, 55) / 100));
+      const hot = bright(p);
+      for (let i = 0; i < pts.length; i++){
+        let d = head - i; if (d < 0) d += pts.length;
+        if (d >= span) continue;
+        const f = 1 - d / span;
+        stamp(pts[i], mix(hot, {r:255,g:255,b:255}, f),
+              Math.round(255 * Math.pow(f, 1.2)), 3);
+      }
+      break;
+    }
+    case 'gradient': {
+      const pts = borderPoints(o, rr);
+      const off = fxPhase(fx, ms, period);
+      const altHex = parseHex(c('accent_alt')) || {r:255,g:255,b:255};
+      const accHex = parseHex(c('accent')) || {r:255,g:0,b:0};
+      /* The second tone must differ from the first, or the gradient is a flat
+         line - and accent_alt is what most themes pick as the effect colour. */
+      const other = (p.r === altHex.r && p.g === altHex.g && p.b === altHex.b)
+                    ? accHex : altHex;
+      for (let i = 0; i < pts.length; i++){
+        let t = i / Math.max(1, pts.length) + off; t -= Math.floor(t);
+        stamp(pts[i], mix(p, other, f32(0.5 - 0.5 * Math.cos(t * 2 * Math.PI))), 255, 3);
+      }
+      break;
+    }
+    case 'notched': {
+      const pts = borderPoints(o, rr);
+      const col = mix(p, bright(p), fxBreath(fx, ms, period));
+      const gap = amt(4, 30) / 100;
+      /* Within its OWN edge, so the notch is centred on every side. */
+      pts.forEach(q => { if (!(q.straight && Math.abs(q.u - 0.5) < gap * 0.5)) stamp(q, col, 255, 3); });
+      break;
+    }
+    case 'ticks': {
+      fxRoundedOutline(ctx, o, rr, rgba(parseHex(c('border')) || p, 255), 1);
+      const pts = borderPoints(o, rr);
+      const every = Math.max(6, 48 - amt(0, 40));
+      const off = Math.trunc(fxPhase(fx, ms, period) * every);
+      pts.forEach((q, i) => { if ((i + off) % every === 0) stamp(q, p, 255, 8); });
+      break;
+    }
+    case 'breathe': {
+      const hi = Math.max(2, amt(3, 8));
+      const t = 1 + Math.round((hi - 1) * fxBreath(fx, ms, period));
+      fxRoundedOutline(ctx, {x:r.x - t, y:r.y - t, w:r.w + t * 2, h:r.h + t * 2},
+                       r.radius + t, rgba(p, 255), t);
+      break;
+    }
+    case 'rails': {
+      const rad = Math.max(0, Math.min(r.radius, Math.min(Math.trunc(r.w/2), Math.trunc(r.h/2))));
+      const col = mix(p, bright(p), fxBreath(fx, ms, period));
+      const x = r.x + rad, w = Math.max(1, r.w - rad * 2);
+      const solid = amt(1, 4);
+      for (let i = 0; i < solid + 2; i++){
+        const a = i < solid ? 255 : (120 >> (i - solid));
+        ctx.fillStyle = rgba(col, a);
+        ctx.fillRect(x, r.y - 1 - i, w, 1);
+        ctx.fillRect(x, r.y + r.h + i, w, 1);
+      }
+      break;
+    }
+    case 'sidebar': {
+      const col = mix(p, bright(p), fxBreath(fx, ms, period));
+      const bar = amt(2, 10), spill = [90, 45, 20];
+      for (let y = r.y; y < r.y + r.h; y++){
+        const row = shapeRow(r, r.radius, y); if (!row) continue;
+        ctx.fillStyle = rgba(col, 255);
+        ctx.fillRect(row.x0, y, Math.min(bar, row.x1 - row.x0 + 1), 1);
+        for (let i = 0; i < 3; i++){
+          const xx = row.x0 + bar + i;
+          if (xx <= row.x1){ ctx.fillStyle = rgba(col, spill[i]); ctx.fillRect(xx, y, 1, 1); }
+        }
+      }
+      break;
+    }
+    case 'brackets': {
+      const col = mix(p, bright(p), fxBreath(fx, ms, period));
+      const arm = Math.min(amt(6, 34), Math.trunc(o.w / 3), Math.trunc(o.h / 3));
+      ctx.fillStyle = rgba(col, 255);
+      for (let t = 0; t < 3; t++){
+        ctx.fillRect(o.x, o.y + t, arm, 1);
+        ctx.fillRect(o.x + o.w - arm, o.y + t, arm, 1);
+        ctx.fillRect(o.x, o.y + o.h - 1 - t, arm, 1);
+        ctx.fillRect(o.x + o.w - arm, o.y + o.h - 1 - t, arm, 1);
+        ctx.fillRect(o.x + t, o.y, 1, arm);
+        ctx.fillRect(o.x + o.w - 1 - t, o.y, 1, arm);
+        ctx.fillRect(o.x + t, o.y + o.h - arm, 1, arm);
+        ctx.fillRect(o.x + o.w - 1 - t, o.y + o.h - arm, 1, arm);
+      }
+      break;
+    }
+    case 'inner_glow': {
+      const spread = amt(3, 16);
+      const k = f32(0.55 + 0.45 * fxBreath(fx, ms, period));
+      for (let y = r.y; y < r.y + r.h; y++){
+        const row = shapeRow(r, r.radius, y); if (!row) continue;
+        const dTop = y - r.y, dBot = r.y + r.h - 1 - y;
+        for (let i = 0; i < spread; i++){
+          const f = 1 - i / spread;
+          const a = Math.round(150 * k * f * f); if (a <= 0) continue;
+          ctx.fillStyle = rgba(p, a);
+          if (dTop === i || dBot === i){
+            ctx.fillRect(row.x0, y, Math.max(1, row.x1 - row.x0 + 1), 1);
+          } else {
+            if (row.x0 + i <= row.x1) ctx.fillRect(row.x0 + i, y, 1, 1);
+            if (row.x1 - i >= row.x0) ctx.fillRect(row.x1 - i, y, 1, 1);
+          }
+        }
+      }
+      break;
+    }
+    case 'lift': {
+      const depth = amt(4, 14);
+      for (let i = 1; i <= depth; i++){
+        const f = 1 - i / (depth + 1);
+        const a = Math.round(190 * Math.pow(f, 1.5)); if (a <= 0) continue;
+        fxRoundedOutline(ctx, {x:r.x - i, y:r.y - i + 6, w:r.w + i * 2, h:r.h + i * 2 - 6},
+                         r.radius + i, `rgba(0,0,0,${a / 255})`, 1);
+      }
+      const top = [150, 80, 35];
+      for (let i = 0; i < 3; i++){
+        const row = shapeRow(r, r.radius, r.y + i); if (!row) continue;
+        ctx.fillStyle = `rgba(255,255,255,${top[i] / 255})`;
+        ctx.fillRect(row.x0, r.y + i, row.x1 - row.x0 + 1, 1);
+      }
+      fxRoundedOutline(ctx, r, r.radius, rgba(p, 255), 1);
+      break;
+    }
+  }
+}
+
 function drawFocusEffect(ms){
   if (!sfxCtx) return;
   sfxCtx.clearRect(0, 0, BG_SCREEN_W, BG_SCREEN_H);
@@ -1548,7 +1829,7 @@ function drawFocusEffect(ms){
   /* Halo first, so particles and the ring land on top of it. SDL2 has no blur,
      so the client stacks outlines with falling alpha - and so does this, or the
      preview would show a soft gradient the console cannot draw. */
-  const halo = effectHalo(fx, ms);
+  const halo = effectReplacesOutline(fx.kind) ? 0 : effectHalo(fx, ms);
   if (halo > 0){
     const o = effectOutline(fx, ms);
     for (let i = halo; i >= 1; i -= 2){
@@ -1558,6 +1839,14 @@ function drawFocusEffect(ms){
       fxRoundedOutline(ctx, {x:r.x - i, y:r.y - i, w:r.w + i * 2, h:r.h + i * 2},
                        r.radius + i, rgba(a), 1);
     }
+  }
+
+  /* A border treatment owns the outline, so it draws instead of the ring -
+     not on top of it. Mirrors focus_ring() checking replaces_outline(). */
+  if (effectReplacesOutline(fx.kind)){
+    drawBorderTreatment(ctx, fx, r, ms, p);
+    setEffectReadout(fx, 0);
+    return;
   }
 
   if (effectParticleKind(fx.kind)){

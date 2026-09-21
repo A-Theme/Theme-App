@@ -52,7 +52,9 @@ const got = await page.evaluate(() => {
   /* The same 32-bit pattern the C++ memcpy'd out of its float. */
   const fbuf = new Float32Array(1), ibuf = new Uint32Array(fbuf.buffer);
   const bits = v => { fbuf[0] = v; return (ibuf[0] >>> 0).toString(16).padStart(8, '0'); };
-  const kinds = ['none','smoke','embers','glow','shimmer','pulse','fade'];
+  /* Walked from the editor's own table, as dump_effects.cpp walks the C++
+     one - so a kind added to either side is compared without being listed. */
+  const kinds = EFFECT_KINDS;
 
   for (const k of kinds)
     for (const sp of [0.1, 0.4, 1.0, 2.5, 8.0])
@@ -78,6 +80,25 @@ const got = await page.evaluate(() => {
               `P|${k}|${sp}|${am}|${ms}|${ri}|${i}|` +
               `${bits(p.x)}|${bits(p.y)}|${bits(p.radius)}|${p.alpha}`));
           }
+  /* The border treatments' maths: cycle period, amount mapped onto each
+     kind's own range, and the walked border with its inward normals. */
+  for (const k of kinds) out.push(`T|${k}|${effectPeriodMs(k)}`);
+
+  for (const [lo, hi] of [[1,5],[8,55],[4,30],[3,8],[1,4],[2,10],[6,34],[3,16],[4,14]])
+    for (let am = 0; am <= 100; am += 5)
+      out.push(`A|${lo}|${hi}|${am}|${effectAmountScaled(am, lo, hi)}`);
+
+  for (const r of [{x:100,y:200,w:600,h:72}, {x:0,y:0,w:20,h:20}, {x:5,y:5,w:200,h:48}])
+    for (const rad of [0, 8, 400]){
+      const pts = borderPoints(r, rad);
+      out.push(`B|${r.x},${r.y},${r.w},${r.h}|${rad}|${pts.length}`);
+      for (let i = 0; i < pts.length; i += 7){
+        const q = pts[i];
+        out.push(`Q|${r.x},${r.y},${r.w},${r.h}|${rad}|${i}|` +
+                 `${bits(q.x)}|${bits(q.y)}|${bits(q.nx)}|${bits(q.ny)}|${bits(q.u)}|` +
+                 `${q.segment}|${q.straight ? 1 : 0}`);
+      }
+    }
   return out;
 });
 
