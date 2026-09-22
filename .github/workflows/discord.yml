@@ -1,0 +1,32 @@
+# Post discord-embed.json to the Discord channel, on demand.
+#
+# discord-embed.json is the project's announcement message. Edit it (or design
+# it in Discohook and paste the JSON back in), then run this from the Actions
+# tab. Release announcements are sent by release.yml on their own.
+#
+# Needs a DISCORD_WEBHOOK_URL repository secret: in Discord, Channel settings ->
+# Integrations -> Webhooks -> New Webhook -> Copy Webhook URL; then in GitHub,
+# Settings -> Secrets and variables -> Actions -> New repository secret.
+
+name: Discord
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: 'Message file to post'
+        required: true
+        default: 'discord-embed.json'
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: .github/scripts/discord-post.sh "${{ github.event.inputs.payload }}"

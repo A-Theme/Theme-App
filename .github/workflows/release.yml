@@ -149,3 +149,40 @@ jobs:
           # replacing them.
           generate_release_notes: true
           files: artifacts/*.zip
+
+      # Announce the release in Discord. This lives here rather than in a
+      # workflow triggered on `release: published`, because a release created
+      # with GITHUB_TOKEN deliberately does not trigger other workflows.
+      - name: Announce in Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TAG: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          URL="https://github.com/$REPO/releases/tag/$TAG"
+          # An embed description holds 4096 characters; cut well short of that
+          # and point at the full notes rather than have Discord reject it.
+          jq -n --arg tag "$TAG" --arg url "$URL" --arg repo "$REPO" \
+                --rawfile notes NOTES.md '
+            ($notes | if length > 3500 then .[:3500] + "\n\n… [full release notes](" + $url + ")" else . end) as $desc
+            | input as $base
+            | {
+                username: $base.username,
+                avatar_url: $base.avatar_url,
+                embeds: [{
+                  title: ("🚀 Aramaki\u0027s Theme Editors " + $tag + " is out"),
+                  url: $url,
+                  description: $desc,
+                  color: $base.embeds[0].color,
+                  thumbnail: $base.embeds[0].thumbnail,
+                  fields: [{
+                    name: "⬇️ Download",
+                    value: ("[Windows & Linux builds](" + $url + ")\n[📁 Repo & Full Docs](https://github.com/" + $repo + ")"),
+                    inline: false
+                  }],
+                  footer: $base.embeds[0].footer,
+                  timestamp: "now"
+                }]
+              }' discord-embed.json > release-embed.json
+          .github/scripts/discord-post.sh release-embed.json
