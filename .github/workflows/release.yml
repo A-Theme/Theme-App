@@ -174,14 +174,15 @@ jobs:
                   title: ("🚀 Aramaki\u0027s Theme Editors " + $tag + " is out"),
                   url: $url,
                   description: $desc,
+                  author: $base.embeds[0].author,
                   color: $base.embeds[0].color,
-                  thumbnail: $base.embeds[0].thumbnail,
+                  image: $base.embeds[0].image,
                   fields: [{
                     name: "⬇️ Download",
                     value: ("[Windows & Linux builds](" + $url + ")\n[📁 Repo & Full Docs](https://github.com/" + $repo + ")"),
                     inline: false
                   }],
-                  footer: $base.embeds[0].footer,
+                  footer: $base.embeds[-1].footer,
                   timestamp: "now"
                 }]
               }' discord-embed.json > release-embed.json
