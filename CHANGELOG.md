@@ -4,7 +4,7 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
-## Unreleased
+## 2.3.0
 
 - **Eleven border treatments.** The client gained focus effects that replace
   the ring rather than decorating it — `ring`, `runner`, `gradient`,
