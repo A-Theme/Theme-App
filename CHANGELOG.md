@@ -4,7 +4,7 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
-## 2.3.0
+## 2.4.0
 
 - **The catalog shows each theme's background.** A row used to carry four
   colour bands, which tell you a palette and nothing about what the theme
@@ -18,6 +18,9 @@ one place release notes are written.
   would — and one request fewer than the colour bands did, since those had
   to read the theme.json first. A theme published without a thumbnail, or
   one whose thumbnail cannot be fetched, still gets its colour bands.
+
+## 2.3.0
+
 - **Eleven border treatments.** The client gained focus effects that replace
   the ring rather than decorating it — `ring`, `runner`, `gradient`,
   `notched`, `ticks`, `breathe`, `rails`, `sidebar`, `brackets`,
