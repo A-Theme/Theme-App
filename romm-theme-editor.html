@@ -549,6 +549,15 @@ const MAX_ANIMATION_BYTES  = 48 * 1024 * 1024;
 const MAX_ANIMATION_FRAMES = 240;
 const MAX_ANIMATION_FPS    = 60;
 
+/* The client build the splash mock pretends to be, mirroring APP_VERSION in
+   romm-switch-client's Makefile. It is cosmetic - nothing here behaves
+   differently because of it - but it is the only line in the editor that
+   claims a console build, and a wrong one reads as a bug in the client rather
+   than as decoration in a drawing of it. It sat at 2.3.0 while the client
+   shipped 2.4.5. If you see those disagree again, this is the only place to
+   change. */
+const CLIENT_VERSION = '2.4.5';
+
 /* Starting palettes: a full 19-role look you can take as a base and edit.
    "Borb (built-in)" is the client's own scheme. Every palette here is checked
    for WCAG contrast on the pairs that actually break a theme - body text over
@@ -1111,7 +1120,7 @@ function splashScreen(){
       `font-size:24px;color:${c('text_muted')};">Nintendo Switch RomM Client</div>` +
     rows +
     `<div style="position:absolute;left:0;top:${720-44}px;width:1280px;text-align:center;` +
-      `font-size:17px;color:${c('text_muted')};">v2.3.0 &middot; preview</div>`;
+      `font-size:17px;color:${c('text_muted')};">v${esc(CLIENT_VERSION)} &middot; preview</div>`;
 }
 
 /** rgba() from a theme hex plus an explicit alpha, for the splash halo. */

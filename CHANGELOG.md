@@ -4,6 +4,13 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
+## Unreleased
+
+- The splash preview said the console was running v2.3.0. That is the client's
+  version, not the editor's, and the client has been on 2.4.5 since before the
+  editor's own 2.3.0 went out. It now reads from a single named constant, so
+  there is one place to change and one place to look.
+
 ## 2.4.0
 
 - **The catalog shows each theme's background.** A row used to carry four
