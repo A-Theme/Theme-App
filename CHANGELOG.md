@@ -4,7 +4,7 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
-## Unreleased
+## 2.3.0
 
 - **The catalog shows each theme's background.** A row used to carry four
   colour bands, which tell you a palette and nothing about what the theme

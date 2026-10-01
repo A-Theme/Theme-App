@@ -3,30 +3,89 @@
   "avatar_url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png",
   "embeds": [
     {
-      "title": "🎨 Aramaki's Theme Editor — now for Tinfoil *and* the RomM Switch client",
+      "author": {
+        "name": "A-Theme · Theme-App",
+        "url": "https://github.com/A-Theme",
+        "icon_url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png"
+      },
+      "title": "Aramaki's Theme Editor",
       "url": "https://github.com/A-Theme/Theme-App",
-      "description": "Two visual editors in one page, no hand-editing raw JSON. The original **Tinfoil** editor for `theme.json`, and a new one for the **RomM Switch client** — colours, backgrounds, fonts, mascot art and music. Both run in the browser, install as apps, and ship as a Windows desktop build.",
-      "color": 49919,
-      "thumbnail": {
-        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png"
-      },
+      "description": "### Visual theme editors for **Tinfoil** and the **RomM Switch client**\n*Two editors. Two apps. One page.*\n\n`🔵 RomM client` `🔴 Tinfoil` `🌐 runs in browser` `🟣 Windows desktop app` `🟢 Android & iOS` `📜 MIT`\n\nNo installs. No command line. Drag in a theme and start editing — live Switch UI preview as you type, export a ready-to-use pack in one click.",
+      "color": 16727120,
       "image": {
-        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/banner.png"
-      },
+        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/header.png"
+      }
+    },
+    {
+      "title": "🧾 What is this?",
+      "description": "Two self-contained web apps in one repo, for theming two different Switch apps. No hand-editing raw JSON and guessing what a field does — load a theme, tweak every field through a proper UI, preview it live, export it back out.\n\nEverything runs **entirely in your browser** (or as a desktop app). Nothing you open ever leaves your machine.",
+      "color": 13191086,
       "fields": [
         {
-          "name": "✨ Features",
-          "value": "• **Tinfoil** — auto-generated editor, live 16:9 preview, palette generator, k-means extraction from your background\n• **RomM** — 19 semantic colour roles, WCAG readability checks, live animated-background memory budget\n• Browse the published theme catalog and open any theme with its assets\n• Background motion previewed with the client's own arithmetic, not a lookalike\n• 100% local — nothing you open ever leaves your machine",
-          "inline": false
+          "name": "🟢 RomM Theme Editor",
+          "value": "the RomM Switch client\n`theme.json`\n**where the work is**",
+          "inline": true
         },
         {
-          "name": "🚀 Get It",
-          "value": "[📁 Repo & Full Docs](https://github.com/A-Theme/Theme-App)\n[💻 Windows Desktop App](https://github.com/A-Theme/Theme-App/releases/latest)\n[🎮 RomM Theme Database](https://github.com/A-Theme/RomM-Themes)",
+          "name": "🔴 Tinfoil Theme Editor",
+          "value": "the Tinfoil shop app\n`settings.json`\n*maintained*",
+          "inline": true
+        }
+      ]
+    },
+    {
+      "title": "🟢 The RomM Theme Editor",
+      "url": "https://github.com/A-Theme/Theme-App#-the-romm-theme-editor",
+      "description": "A RomM theme is a folder with a `theme.json` in it, and changes a lot more than a Tinfoil theme.",
+      "color": 10309341,
+      "fields": [
+        { "name": "🎨 19 colour roles", "value": "semantic, each with its own opacity slider", "inline": true },
+        { "name": "🖼️ Background", "value": "1280×720 with `dim`, `drift`, `pan`, `zoom`", "inline": true },
+        { "name": "🎞️ Animated", "value": "sprite sheets or GIF in a 48 MB budget", "inline": true },
+        { "name": "🔤 Font", "value": "`.ttf`/`.otf` at all five sizes", "inline": true },
+        { "name": "✨ Focus effects", "value": "17 kinds, previewed live", "inline": true },
+        { "name": "🎵 Music", "value": "MP3, OGG, Opus, FLAC, tracker modules", "inline": true },
+        {
+          "name": "What the editor does for you",
+          "value": "• **Browse the published catalog** and open any theme with its assets\n• **Live preview of the real screens** at the console's 1280×720\n• **Motion that actually plays** — a port of the client's own arithmetic\n• **20 starting palettes** + **WCAG readability checks**\n• **Live memory budget** for animated backgrounds\n• Import a folder, `.zip` or `theme.json` · export a ready-to-drop pack",
           "inline": false
         }
       ],
+      "image": {
+        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/screenshots/romm-theme-editor.png"
+      }
+    },
+    {
+      "title": "⚡ Tinfoil editor at a glance",
+      "url": "https://github.com/A-Theme/Theme-App#-at-a-glance",
+      "color": 5017087,
+      "fields": [
+        { "name": "🎨 Design", "value": "19 palette schemes · colours from your wallpaper · Switch-accurate preview · readability fixes", "inline": true },
+        { "name": "🗂️ Edit", "value": "Auto-generated form · real pickers with alpha · logo & audio preview · raw JSON", "inline": true },
+        { "name": "📦 Ship", "value": "Browse the collection · export a `.zip` · submit to A-Theme · install on-console", "inline": true }
+      ],
+      "image": {
+        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/screenshots/tinfoil-theme-editor.png"
+      }
+    },
+    {
+      "title": "🚀 Get it",
+      "color": 49919,
+      "fields": [
+        { "name": "🌐 Browser", "value": "[Quick start](https://github.com/A-Theme/Theme-App#-quick-start)", "inline": true },
+        { "name": "💻 Desktop", "value": "[Windows build](https://github.com/A-Theme/Theme-App/releases/latest)", "inline": true },
+        { "name": "📖 Docs", "value": "[Repo & README](https://github.com/A-Theme/Theme-App)", "inline": true },
+        {
+          "name": "🔗 The whole A-Theme project",
+          "value": "🟢 [RomM-Themes](https://github.com/A-Theme/RomM-Themes) — RomM theme database\n🟣 [spritesheet-maker](https://github.com/A-Theme/RomM-Themes/tree/main/tools/spritesheet-maker) — animated backgrounds\n🔴 [Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) — Tinfoil theme database\n🟪 [Switch-Theme-Installer](https://github.com/A-Theme/Switch-Theme-Installer) — on-console installer\n🌍 [a-theme.ca](https://a-theme.ca)",
+          "inline": false
+        }
+      ],
+      "image": {
+        "url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/screenshots/index.png"
+      },
       "footer": {
-        "text": "A-Theme · Questions or theme requests? Drop them in this channel.",
+        "text": "Made by Aramaki · A-Theme · Questions or theme requests? Drop them in this channel.",
         "icon_url": "https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/logo.png"
       },
       "timestamp": "2026-08-02T00:00:00.000Z"
