@@ -241,8 +241,9 @@
   .cat-row{display:flex;align-items:center;gap:13px;padding:11px 12px;border:1px solid var(--line);
     border-radius:10px;background:var(--bg-2);margin-bottom:9px;}
   .cat-row.busy{opacity:.55;}
-  .cat-sw{flex:none;width:54px;height:54px;border-radius:8px;border:1px solid var(--line);
+  .cat-sw{flex:none;width:96px;height:54px;border-radius:8px;border:1px solid var(--line);
     overflow:hidden;display:flex;flex-direction:column;background:var(--bg-0);}
+  .cat-sw img{width:100%;height:100%;display:block;object-fit:cover;}
   .cat-sw span{flex:1;display:block;}
   .cat-meta{flex:1;min-width:0;}
   .cat-meta b{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -2799,6 +2800,16 @@ function themeFileUrl(folder, file){
 }
 
 /**
+ * A URL for a repo-relative path the manifest hands out, such as
+ * "thumbs/Abyssal Lantern.webp". Each segment goes through the same encoder a
+ * theme file's does; the slashes between them stay slashes.
+ */
+function catalogPathUrl(path){
+  if (!path || path.startsWith('/') || path.includes('..')) return '';
+  return CATALOG_BASE + path.split('/').map(encodeSeg).join('/');
+}
+
+/**
  * Read manifest.json into rows.
  *
  * A row without a usable folder is skipped rather than failing the catalog,
@@ -2825,7 +2836,8 @@ function parseCatalog(doc){
       hasFont:   t.has_font === true,
       hasMascot: t.has_mascot === true,
       hasMusic:  t.has_music === true,
-      animated:  t.animated === true
+      animated:  t.animated === true,
+      thumb:   typeof t.thumb === 'string' ? t.thumb : ''
     });
   }
   return out;
@@ -2933,20 +2945,50 @@ function escapeHtml(s){
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
 
-/* Swatches are painted lazily. With 50-odd themes, fetching every theme.json
-   up front would be 50 requests to show a list nobody has scrolled yet; an
-   observer fetches only the rows that actually reach the screen. */
-const swatchObserver = ('IntersectionObserver' in window)
+/* Thumbnails are painted lazily. A row shows the theme's background, because
+   four colour bands tell you a palette and nothing about what the theme looks
+   like - which is the one question a catalog is for.
+
+   What it does NOT show is the background itself: those run to about 1.3 MB
+   each and a scroll through 160 of them would be a couple of hundred MB. The
+   repo publishes a 16:9 crop of each one at around 19 KB (thumbs/, written by
+   its scripts/make-thumbs.py) and the manifest names it. An animated theme's
+   thumbnail animates, because a still of something that moves is exactly what
+   this is replacing.
+
+   An observer paints only the rows that reach the screen, so a catalog nobody
+   has scrolled costs nothing. */
+const thumbObserver = ('IntersectionObserver' in window)
   ? new IntersectionObserver((entries, obs) => {
       for (const en of entries){
         if (!en.isIntersecting) continue;
         obs.unobserve(en.target);
-        paintSwatch(en.target);
+        paintThumb(en.target);
       }
     }, {root: null, rootMargin: '120px'})
   : null;
 
-async function paintSwatch(el){
+function paintThumb(el){
+  const url = catalogPathUrl(el.dataset.thumb || '');
+  if (!url) { paintBands(el); return; }
+
+  const img = document.createElement('img');
+  img.alt = '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  // A theme published before the thumbnails existed, or one whose background
+  // could not be cropped, still gets a row worth looking at.
+  img.addEventListener('error', () => { img.remove(); paintBands(el); },
+                       {once: true});
+  el.textContent = '';
+  el.appendChild(img);
+  img.src = url;
+}
+
+/* The old row: four colours off the theme.json, for the themes that have no
+   thumbnail to show. It costs a request, which is why it is the fallback and
+   not the rule. */
+async function paintBands(el){
   const folder = el.dataset.folder;
   try {
     const doc = await catalogDoc(folder);
@@ -2962,7 +3004,7 @@ async function paintSwatch(el){
       b.style.background = v || 'transparent';
       el.appendChild(b);
     });
-  } catch (e) { /* a swatch is decoration; a failed one just stays blank */ }
+  } catch (e) { /* decoration; a failed one just stays blank */ }
 }
 
 function renderCatalog(){
@@ -2987,6 +3029,7 @@ function renderCatalog(){
     const sw = document.createElement('div');
     sw.className = 'cat-sw';
     sw.dataset.folder = e.folder;
+    sw.dataset.thumb = e.thumb || '';
     row.appendChild(sw);
 
     const meta = document.createElement('div');
@@ -3010,7 +3053,7 @@ function renderCatalog(){
     row.appendChild(btn);
 
     host.appendChild(row);
-    if (swatchObserver) swatchObserver.observe(sw); else paintSwatch(sw);
+    if (thumbObserver) thumbObserver.observe(sw); else paintThumb(sw);
   });
 }
 

@@ -76,7 +76,8 @@ What the editor does for you:
 
 - **Browse the published catalog** — it reads the same `manifest.json` the console
   reads and lists every theme in
-  [RomM-Themes](https://github.com/A-Theme/RomM-Themes), with what each one changes.
+  [RomM-Themes](https://github.com/A-Theme/RomM-Themes), with what each one changes
+  and a thumbnail of its background — animated, where the background moves.
   Opening one pulls its background, font, mascot and music down too, so the quickest
   way to start a new theme is usually to open the nearest existing one and change it.
 - **Live preview of the real screens** — library, detail and a dialog, drawn at the

@@ -6,6 +6,18 @@ one place release notes are written.
 
 ## Unreleased
 
+- **The catalog shows each theme's background.** A row used to carry four
+  colour bands, which tell you a palette and nothing about what the theme
+  looks like. It now shows the background art itself — animated, for the
+  themes whose background moves.
+
+  Not the background file: those average about 1.3 MB and a scroll through
+  160 rows would have been a couple of hundred megabytes. RomM-Themes
+  publishes a 16:9 crop of each one at around 19 KB and names it in the
+  manifest, so a row costs roughly a seventieth of what the real background
+  would — and one request fewer than the colour bands did, since those had
+  to read the theme.json first. A theme published without a thumbnail, or
+  one whose thumbnail cannot be fetched, still gets its colour bands.
 - **Eleven border treatments.** The client gained focus effects that replace
   the ring rather than decorating it — `ring`, `runner`, `gradient`,
   `notched`, `ticks`, `breathe`, `rails`, `sidebar`, `brackets`,
