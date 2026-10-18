@@ -4,6 +4,23 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
+## 2.5.1
+
+- **Tinfoil wallpapers are scaled to the screen.** CyberFoil draws a
+  wallpaper at its own size and never scales it, so a 1920×1080 Tinfoil
+  wallpaper showed only its top-left two-thirds, with the frame art Tinfoil
+  themes bake into them cut off mid-shape. Every wallpaper is now fitted to
+  1280×720 on the way in, and the checks say when one was.
+- **Invisible Tinfoil colours stay invisible-looking.** A Tinfoil colour at
+  zero alpha was never seen, so its RGB is whatever was left there —
+  Mewtwo2's menu is a tan nobody chose. Making such a bar opaque for
+  legibility now uses black, which CyberFoil's white icons are drawn for.
+- **Best-effort legibility.** Where a theme's text and surface colours are
+  too close to reach the contrast bar even opaque, the bar now takes the
+  opacity that reads best rather than staying see-through, and the report
+  gives the ratio it reached. Across the 170 Tinfoil themes, readability
+  errors fall from 66 to 53.
+
 ## 2.5.0
 
 ### A third editor: CyberFoil

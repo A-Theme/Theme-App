@@ -154,7 +154,7 @@ const results = await page.evaluate(async () => {
   const tinfoil = {color: 'FFFFFFFF', logo: 'sdmc:/switch/tinfoil/themes/Probe/logo.png',
     background: {color: '102030FF', image: 'sdmc:/switch/tinfoil/themes/Probe/bg.bmp'},
     selection: {color: 'FFEE00FF', background: {color: '00000080'}, border: {color: 'FF3366FF', width: 1}},
-    menu: {selection: {color: 'FFFFFFFF', background: {color: '22446680'}}, background: {color: '00000033'}},
+    menu: {selection: {color: 'FFFFFFFF', background: {color: '22446680'}}, background: {color: 'B4A27200'}},
     border: {color: '113355FF', width: 0.5},
     progressBar: {color: '2244AAFF', background: {color: '111111CC'}, width: 0.5},
     scrollBar: {color: '888888FF', background: {color: '00000055'}, width: 0.5},
@@ -180,6 +180,10 @@ const results = await page.evaluate(async () => {
         'a see-through menu too faint for its text is made more opaque, and reported', [state.colors.panel, state.report.adjusted]);
   const tbg = lastPack.files.find(f => f.path.startsWith('background.'));
   check(tbg && tbg.type === 'image/png' && tbg.path === 'background.png', 'a BMP wallpaper is redrawn as PNG', tbg && tbg.path);
+  check(tbg && tbg.image && tbg.image.w === 1280 && tbg.image.h === 720 && state.bg.fittedFrom === '256×144',
+        'a wallpaper of any size is scaled to fill 1280x720, which CyberFoil draws unscaled', tbg && [tbg.image, state.bg.fittedFrom]);
+  check(state.colors.panel.startsWith('#000000') && state.colors.header.startsWith('#000000'),
+        'an invisible Tinfoil menu colour becomes black, not its leftover RGB, when made visible', [state.colors.panel, state.colors.header]);
   check(lastPack.files.some(f => f.path === 'banner.png' && f.image && f.image.w === 480 && f.image.h === 93),
         'the Tinfoil logo is fitted into a 480x93 banner');
   const tdrop = state.report.dropped.join(' | ');

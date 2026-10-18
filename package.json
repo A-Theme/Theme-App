@@ -1,7 +1,7 @@
 {
   "name": "aramaki-theme-editors",
   "productName": "Aramaki's Theme Editors",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Visual theme editors for Tinfoil (settings.json), the RomM Switch client (theme.json) and CyberFoil (theme.json)",
   "main": "main.js",
   "author": "Aramaki",
