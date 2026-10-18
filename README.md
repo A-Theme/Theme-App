@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/A-Theme/Theme-App/main/assets/header.png" alt="Aramaki's Theme Editor - for Tinfoil and the RomM Switch client" width="100%"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=660&lines=Theme+the+RomM+Switch+client%2C+visually.;Turn+any+RomM+theme+into+a+CyberFoil+one.;Three+editors.+Three+apps.+One+page.;No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Export+a+ready-to-use+pack+in+one+click.)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1200&color=00C2FF&center=true&vCenter=true&width=660&lines=Theme+the+RomM+Switch+client%2C+visually.;Turn+any+RomM+or+Tinfoil+theme+into+a+CyberFoil+one.;Three+editors.+Three+apps.+One+page.;No+installs.+No+command+line.;Drag+in+a+theme+and+start+editing.;Live+Switch+UI+preview+as+you+type.;Export+a+ready-to-use+pack+in+one+click.)](https://git.io/typing-svg)
 
 [![RomM editor](https://img.shields.io/badge/editor-RomM%20client-4C8DFF?style=for-the-badge)](romm-theme-editor.html)
 [![CyberFoil editor](https://img.shields.io/badge/editor-CyberFoil-9d4edd?style=for-the-badge)](cyberfoil-theme-editor.html)
@@ -37,7 +37,7 @@ preview it live, export it back out.
 | editor | themes | file | |
 |---|---|---|---|
 | **[RomM Theme Editor](romm-theme-editor.html)** | the RomM Switch client, an SDL2 homebrew app | `theme.json` | **where the work is** |
-| **[CyberFoil Theme Editor](cyberfoil-theme-editor.html)** | [CyberFoil](https://github.com/luketanti/CyberFoil), the Switch installer | `theme.json` | **new** — and converts RomM themes |
+| **[CyberFoil Theme Editor](cyberfoil-theme-editor.html)** | [CyberFoil](https://github.com/luketanti/CyberFoil), the Switch installer | `theme.json` | **new** — and converts RomM and Tinfoil themes |
 | **[Tinfoil Theme Editor](tinfoil-theme-editor.html)** | [Tinfoil](https://github.com/Huntereb/Tinfoil), the Switch shop app | `settings.json` | maintained |
 
 [`index.html`](index.html) is a launcher offering all three — it is what the desktop
@@ -180,6 +180,16 @@ What the editor does for you:
   load, draws a banner with the theme's name in it instead. What cannot come
   across — motion, animation, focus effects, music, the unused roles — is listed
   rather than dropped silently.
+- **Convert any Tinfoil theme, too.** The same dialog has a Tinfoil tab reading
+  the [Tinfoil-Themes](https://github.com/A-Theme/Tinfoil-Themes) database, and a
+  Tinfoil `.zip` imports the same way. Tinfoil's layout colours are read for what
+  they do — the side menu's fill becomes the bars and panels, the selected tile's
+  text and fill the focus pair — its logo is fitted into the banner, BMPs are
+  redrawn as PNG, and its HOME-menu patches (`.ips`, `.szs`, `.nxtheme`) are left
+  out. Tinfoil themes lean on see-through menus, so where text would not read over
+  the wallpaper the bar's opacity is raised — hue kept — just far enough, and the
+  report lists each change. All 170 themes in the database convert and are listed
+  by CyberFoil.
 - **A checker that is CyberFoil's own code.** Whether the picker lists your theme,
   what it calls it, which colours parse and which images survive all come from
   a port of CyberFoil's `source/util/theme.cpp`, run over the exact bytes you are

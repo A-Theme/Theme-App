@@ -150,6 +150,42 @@ const results = await page.evaluate(async () => {
         'a #RGB colour is rewritten to a form CyberFoil reads, an unknown role is dropped', state.colors);
   check(state.meta.folder === 'loose', 'a root-level .json keeps its stem as the folder', state.meta.folder);
 
+  /* ---- a Tinfoil theme ---- */
+  const tinfoil = {color: 'FFFFFFFF', logo: 'sdmc:/switch/tinfoil/themes/Probe/logo.png',
+    background: {color: '102030FF', image: 'sdmc:/switch/tinfoil/themes/Probe/bg.bmp'},
+    selection: {color: 'FFEE00FF', background: {color: '00000080'}, border: {color: 'FF3366FF', width: 1}},
+    menu: {selection: {color: 'FFFFFFFF', background: {color: '22446680'}}, background: {color: '00000033'}},
+    border: {color: '113355FF', width: 0.5},
+    progressBar: {color: '2244AAFF', background: {color: '111111CC'}, width: 0.5},
+    scrollBar: {color: '888888FF', background: {color: '00000055'}, width: 0.5},
+    music: {url: 'sdmc:/switch/tinfoil/themes/Probe/shop-theme.mp3', volume: 5}};
+  const bmp = (() => {   /* a 256x144 white 24-bit BMP: a type CyberFoil does not document */
+    const W = 256, H = 144, size = 54 + W * H * 3;
+    const b = new Uint8Array(size).fill(255), v = new DataView(b.buffer);
+    b.fill(0, 0, 54); b[0] = 66; b[1] = 77; v.setUint32(2, size, true); v.setUint32(10, 54, true); v.setUint32(14, 40, true);
+    v.setInt32(18, W, true); v.setInt32(22, H, true); v.setUint16(26, 1, true); v.setUint16(28, 24, true);
+    let bin = ''; for (let i = 0; i < b.length; i += 8192) bin += String.fromCharCode(...b.subarray(i, i + 8192));
+    return 'data:image/bmp;base64,' + btoa(bin);
+  })();
+  const tf = {'settings.json': JSON.stringify(tinfoil), 'bg.bmp': bmp, 'logo.png': png(300, 120, 'rgb(255,0,0)'), 'patch.ips': ''};
+  await importBundle(Object.entries(tf).map(([base, v]) => ({dir: '', base,
+    text: async () => v, dataUrl: async () => v})), 'Aramaki_Tinfoil_Probe');
+  await settled();
+  check(state.report && state.report.kind === 'Tinfoil' && state.meta.name === 'Tinfoil Probe' && state.meta.author === 'Aramaki',
+        'a Tinfoil settings.json is recognised and named from its folder', [state.report && state.report.kind, state.meta.name]);
+  check(state.colors.text === '#FFFFFF' && state.colors.selected_text === '#FFEE00' && state.colors.background === '#102030' &&
+        state.colors.progress_track === '#111111CC' && state.colors.accent === '#FF3366',
+        'Tinfoil colours map by role, and the more visible of its brand colours becomes accent', state.colors);
+  check(parseHex(state.colors.panel).a > 0x33 && (state.report.adjusted || []).some(a => a.startsWith('panel')),
+        'a see-through menu too faint for its text is made more opaque, and reported', [state.colors.panel, state.report.adjusted]);
+  const tbg = lastPack.files.find(f => f.path.startsWith('background.'));
+  check(tbg && tbg.type === 'image/png' && tbg.path === 'background.png', 'a BMP wallpaper is redrawn as PNG', tbg && tbg.path);
+  check(lastPack.files.some(f => f.path === 'banner.png' && f.image && f.image.w === 480 && f.image.h === 93),
+        'the Tinfoil logo is fitted into a 480x93 banner');
+  const tdrop = state.report.dropped.join(' | ');
+  check(tdrop.includes('music') && tdrop.includes('patch file') && tdrop.includes('tile border'), 'the report names what Tinfoil had that CyberFoil does not', tdrop);
+  check(cfDiscover(lastVfs.vfs).length === 1 && cfLoad(lastVfs.vfs, lastVfs.selected).colors.size === 11, 'CyberFoil lists the converted Tinfoil theme');
+
   /* ---- every screen paints ---- */
   for (const [oled, noAnime] of [[false, false], [true, false], [false, true]]) for (const scr of ['main', 'browser', 'queue', 'install']){
     state.oled = oled; state.noAnime = noAnime; state.screen = scr; render();

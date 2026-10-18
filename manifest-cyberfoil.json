@@ -1,7 +1,7 @@
 {
   "name": "Aramaki's Theme Editor — CyberFoil",
   "short_name": "CyberFoil Themes",
-  "description": "A visual, in-browser editor for CyberFoil theme.json files, and a converter for RomM client themes.",
+  "description": "A visual, in-browser editor for CyberFoil theme.json files, and a converter for RomM and Tinfoil themes.",
   "start_url": "./cyberfoil-theme-editor.html",
   "scope": "./",
   "display": "standalone",

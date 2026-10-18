@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1420">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="A visual, in-browser editor for CyberFoil theme.json files, and a converter for RomM client themes.">
+<meta name="description" content="A visual, in-browser editor for CyberFoil theme.json files, and a converter for RomM and Tinfoil themes.">
 
 <!-- PWA / Add to Home Screen. Its own manifest, so it installs as its own
      app alongside the Tinfoil and RomM editors rather than replacing them. -->
@@ -224,11 +224,11 @@
       <div class="mark"><img src="assets/logo.png" alt="" onerror="this.parentNode.textContent='CF'"></div>
       <div>
         <h1>Aramaki's Theme Editor</h1>
-        <p>Build a <code>theme.json</code> for <strong>CyberFoil</strong> &mdash; or convert one of your RomM themes into one</p>
+        <p>Build a <code>theme.json</code> for <strong>CyberFoil</strong> &mdash; or convert any RomM or Tinfoil theme into one</p>
       </div>
     </div>
     <div class="controls">
-      <button id="btnCatalog" title="Open any published RomM theme, converted to CyberFoil's format">Convert a RomM theme</button>
+      <button id="btnCatalog" title="Open any published RomM or Tinfoil theme, converted to CyberFoil's format">Convert a theme</button>
       <label class="filebtn" title="A CyberFoil or RomM theme.json, a .zip pack, or theme.json selected together with its files">Import theme<input type="file" id="importFile" multiple accept=".json,.zip,application/json,application/zip,image/*,.ttf,.otf"></label>
       <label class="filebtn" title="Pick the theme's folder so its images come with it">Import folder<input type="file" id="importDir" webkitdirectory directory></label>
       <button class="ghost" id="btnDefault">Reset to default</button>
@@ -390,15 +390,15 @@
   <div class="cat">
     <div class="cat-head">
       <div>
-        <h3 id="catTitle">Convert a RomM theme</h3>
-        <p>Published themes from
-          <a href="https://github.com/A-Theme/RomM-Themes/tree/main/themes" target="_blank" rel="noopener">A-Theme/RomM-Themes</a>.
-          Opening one maps its 19 roles onto CyberFoil's 11, darkens its background by its own <code>dim</code>,
-          and draws a banner in its font.</p>
+        <h3 id="catTitle">Convert a theme</h3>
+        <p>Published themes from <a href="https://github.com/A-Theme/RomM-Themes" target="_blank" rel="noopener">RomM-Themes</a>
+          and <a href="https://github.com/A-Theme/Tinfoil-Themes" target="_blank" rel="noopener">Tinfoil-Themes</a>, converted
+          to CyberFoil's format as they open. What cannot come across is listed afterwards.</p>
       </div>
       <button class="ghost" id="catClose" aria-label="Close">Close</button>
     </div>
     <div class="cat-tools">
+      <span class="tabs"><button data-src="romm" class="on">RomM</button><button data-src="tinfoil">Tinfoil</button></span>
       <input type="search" id="catSearch" placeholder="Filter by name or author&hellip;" autocomplete="off">
       <button class="ghost" id="catReload">Reload</button>
     </div>
@@ -888,6 +888,18 @@ async function assetFromDataUrl(name, url){
   const d = await decodeImage(url);
   if (d){ a.w = d.w; a.h = d.h; }
   a.decoded = !!d;
+  /* A BMP or GIF decodes here but is not one of the types CyberFoil documents,
+     so it is redrawn as a PNG rather than shipped as a gamble. Tinfoil themes
+     carry a fair number of BMPs. */
+  if (d && !IMAGE_TYPES[a.type]){
+    const cv = document.createElement('canvas');
+    cv.width = d.w; cv.height = d.h;
+    cv.getContext('2d').drawImage(d.img, 0, 0);
+    a.dataUrl = cv.toDataURL('image/png');
+    a.type = 'image/png';
+    a.size = dataUrlSize(a.dataUrl);
+    a.name = name.replace(/\.[^.]*$/, '') + '.png';
+  }
   return a;
 }
 
@@ -1556,7 +1568,7 @@ function pushStateToInputs(){
   $('oled').checked = state.oled;
   $('hideMascots').checked = state.hideMascots;
   $('noAnime').checked = state.noAnime;
-  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x.dataset.screen === state.screen));
+  document.querySelectorAll('.preview-panel .tabs button').forEach(x => x.classList.toggle('on', x.dataset.screen === state.screen));
 }
 
 function renderAssetLabels(){
@@ -1577,9 +1589,11 @@ function renderReport(){
   const r = state.report, el = $('report');
   if (!r){ el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = `<b>Converted from the RomM theme "${esc(r.from)}".</b> ` +
+  el.innerHTML = `<b>Converted from the ${esc(r.kind || 'RomM')} theme "${esc(r.from)}".</b> ` +
     'CyberFoil has no slot for these, so they stay behind:' +
     `<ul>${r.dropped.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` +
+    (r.adjusted && r.adjusted.length ? 'Adjusted so it reads in CyberFoil\'s layout:' +
+      `<ul>${r.adjusted.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : '') +
     '<button class="ghost" id="reportClose" style="margin-top:8px;">Dismiss</button>';
   $('reportClose').addEventListener('click', () => { state.report = null; render(); });
 }
@@ -1729,6 +1743,15 @@ function looksLikeRomm(doc){
   return typeof doc.version === 'string';
 }
 
+/** Tinfoil's settings.json: colours as bare RRGGBBAA, and nested objects for
+    selection, menu, progressBar and scrollBar that neither other format has. */
+function looksLikeTinfoil(doc){
+  const obj = v => v && typeof v === 'object' && !Array.isArray(v);
+  if (doc.colors !== undefined || doc.images !== undefined) return false;
+  return ['selection', 'menu', 'progressBar', 'scrollBar', 'border'].some(k => obj(doc[k])) ||
+         (typeof doc.color === 'string' && obj(doc.background));
+}
+
 /** Find a file the theme names, beside its theme.json first, then anywhere. */
 function findInBundle(bundle, homeDir, rel){
   const want = (homeDir ? homeDir + '/' : '') + rel.replace(/^\.\//, '');
@@ -1836,15 +1859,171 @@ async function importRomm(doc, fetchFile, label){
     .filter(k => k in c);
   if (unused.length) dropped.push(`${unused.length} colour roles CyberFoil has no place for: ${unused.join(', ')}`);
   if (missing.length) dropped.push(`files that could not be read: ${missing.join(', ')}`);
-  state.report = {from: label || state.meta.name || 'RomM theme', dropped};
+  state.report = {kind: 'RomM', from: label || state.meta.name || 'RomM theme', dropped};
+}
+
+/* ===========================================================================
+   Tinfoil -> CyberFoil.
+
+   Tinfoil names its colours by where they sit rather than what they mean, so
+   the mapping reads its layout: the side menu's fill is the closest thing to
+   CyberFoil's bars and panels, the selected tile's text and fill are the focus
+   pair, and the progress and scroll bars carry across directly. CyberFoil has
+   no muted text in Tinfoil's vocabulary, so it is the body text at 72%.
+
+   accent is the one real choice. Tinfoil spends its brand colour on either
+   the selection border or the progress fill depending on the theme, so the
+   one that stands out more against the panels wins - the job accent does in
+   CyberFoil is to be seen.
+   =========================================================================== */
+const TINFOIL_SYSTEM_FILES = /\.(ips|szs|nxtheme|bin|flag|ini)$/i;
+
+/** "Aramaki_Cowboy_Bebop" -> {name: "Cowboy Bebop", author: "Aramaki"}. */
+function tinfoilName(folder){
+  const m = /^Aramaki_(.+)$/.exec(folder);
+  return {name: (m ? m[1] : folder).replace(/_/g, ' ').trim() || folder, author: m ? 'Aramaki' : ''};
+}
+
+/** A Tinfoil logo, fitted into the part of CyberFoil's banner both layouts show. */
+async function bannerFromLogo(url){
+  const d = await decodeImage(url);
+  if (!d || !d.w || !d.h) return null;
+  const cv = document.createElement('canvas');
+  cv.width = 480; cv.height = 93;
+  const RIGHT = 466, SAFE = 113 + 14, MAXH = 66;
+  const k = Math.min((RIGHT - SAFE) / d.w, MAXH / d.h);
+  const w = Math.round(d.w * k), h = Math.round(d.h * k);
+  cv.getContext('2d').drawImage(d.img, RIGHT - w, Math.round(45 - h / 2), w, h);
+  return assetFromDataUrl('banner.png', cv.toDataURL('image/png'));
+}
+
+/** The brightest 4x4-block average of what the screen shows of an image. */
+async function brightestPatch(url){
+  const d = await decodeImage(url);
+  if (!d) return null;
+  const W = 64, H = 36, B = 4;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d', {willReadFrequently: true});
+  const sw = Math.min(d.w, 1280), sh = Math.min(d.h, 720);
+  c.drawImage(d.img, 0, 0, sw, sh, 0, 0, Math.round(W * sw / 1280), Math.round(H * sh / 720));
+  const px = c.getImageData(0, 0, W, H).data;
+  let best = -1, peak = null;
+  for (let by = 0; by + B <= H; by += B) for (let bx = 0; bx + B <= W; bx += B){
+    let r = 0, g = 0, b = 0;
+    for (let y = by; y < by + B; y++) for (let x = bx; x < bx + B; x++){ const i = (y * W + x) * 4; r += px[i]; g += px[i+1]; b += px[i+2]; }
+    const p = {r: Math.round(r/16), g: Math.round(g/16), b: Math.round(b/16), a: 255};
+    const l = luminance(p);
+    if (l > best){ best = l; peak = p; }
+  }
+  return peak;
+}
+
+/**
+ * Tinfoil themes lean on see-through menus over busy wallpapers, and what
+ * reads in Tinfoil's layout often does not over CyberFoil's full-width bars.
+ * The hue of each surface is kept; only its opacity rises, in steps, until
+ * the text on it clears the same bar the checks use over the wallpaper's
+ * brightest patch. A pair that fails even fully opaque is two colours that
+ * clash, and is left as the theme chose it - the checks will say so.
+ */
+async function raiseForLegibility(adjusted){
+  const peak = state.bg.mode === 'image' && state.bg.dataUrl ? await brightestPatch(state.bg.dataUrl) : null;
+  const backdrop = peak || withAlpha(parseHex(state.colors.background || '#670000'), 255);
+  const get = k => parseHex(state.colors[k] || '');
+  const lift = (role, fgOf, underOf, need) => {
+    const c = get(role), fg = fgOf();
+    if (!c || !fg) return;
+    const ok = a => { const under = over(withAlpha(c, a), underOf()); return contrast(over(fg, under), under) >= need; };
+    if (ok(c.a)) return;
+    let a = c.a;
+    while (a < 255 && !ok(a)) a = Math.min(255, a + 8);
+    if (!ok(a)) return;
+    state.colors[role] = toHex(withAlpha(c, a));
+    adjusted.push(`${role} opacity ${Math.round(c.a / 2.55)}% → ${Math.round(a / 2.55)}%, so its text reads over the wallpaper`);
+  };
+  for (const role of ['header', 'footer', 'panel']) lift(role, () => get('text'), () => backdrop, 4.5);
+  lift('highlight', () => get('selected_text') || get('text'), () => over(get('panel') || backdrop, backdrop), 4.5);
+  /* Muted text follows body text's opacity up when 72% is too faint. */
+  const m = get('muted_text'), t = get('text'), pnl = over(get('panel') || backdrop, backdrop);
+  if (m && t && contrast(over(m, pnl), pnl) < 3 && contrast(over(t, pnl), pnl) >= 3){
+    state.colors.muted_text = toHex(withAlpha(m, t.a));
+    adjusted.push('muted_text raised to the body text\'s opacity');
+  }
+}
+
+async function importTinfoil(doc, fetchFile, folder, extras){
+  resetState();
+  const who = tinfoilName(folder);
+  state.meta.name = who.name;
+  state.meta.author = who.author;
+  const get = (...p) => p.reduce((o, k) => (o && typeof o === 'object') ? o[k] : undefined, doc);
+  const col = (...p) => parseHex(get(...p));
+  const set = (role, c) => { if (c) state.colors[role] = toHex(c); };
+  const dropped = [], missing = [];
+
+  const bg = col('background', 'color'), text = col('color'), menu = col('menu', 'background', 'color');
+  set('background', bg && withAlpha(bg, 255));
+  set('header', menu); set('footer', menu); set('panel', menu);
+  set('text', text);
+  set('muted_text', text && withAlpha(text, Math.round(text.a * 0.72)));
+  set('selected_text', col('selection', 'color'));
+  set('highlight', col('selection', 'background', 'color'));
+  set('progress_track', col('progressBar', 'background', 'color'));
+  set('scrollbar', col('scrollBar', 'color'));
+  const base = withAlpha(bg || {r: 0, g: 0, b: 0}, 255);
+  const panel = menu ? over(menu, base) : base;
+  const candidates = [col('selection', 'border', 'color'), col('progressBar', 'color'), col('border', 'color')].filter(Boolean);
+  if (candidates.length){
+    const pick = candidates.reduce((a, b) => contrast(over(b, panel), panel) > contrast(over(a, panel), panel) ? b : a);
+    set('accent', withAlpha(pick, 255));
+  }
+
+  /* Tinfoil points at sdmc:/switch/tinfoil/themes/<name>/file, or a URL. */
+  const resolve = async ref => {
+    if (typeof ref !== 'string' || !ref.trim()) return null;
+    if (/^https?:\/\//i.test(ref)){
+      try { return await fetchDataUrl(ref, splitPath(ref.split('?')[0]).base, 8000); } catch (e) { return null; }
+    }
+    return fetchFile(splitPath(ref).base);
+  };
+  const bgRef = get('background', 'image');
+  const bgUrl = await resolve(bgRef);
+  if (bgUrl){ Object.assign(state.bg, await assetFromDataUrl(splitPath(bgRef).base, bgUrl), {mode: 'image', dim: 0}); }
+  else {
+    state.bg.mode = 'none';
+    if (typeof bgRef === 'string' && bgRef) missing.push(/^https?:/i.test(bgRef) ? `the background at ${bgRef} (could not be downloaded)` : splitPath(bgRef).base);
+  }
+  const logoRef = get('logo');
+  const logoUrl = await resolve(logoRef);
+  const logo = logoUrl ? await bannerFromLogo(logoUrl) : null;
+  if (logo){ Object.assign(state.banner, logo, {mode: 'image'}); }
+  else {
+    state.banner.mode = 'generate';
+    if (typeof logoRef === 'string' && logoRef) missing.push(/^https?:/i.test(logoRef) ? `the logo at ${logoRef} (could not be downloaded) - a banner is drawn instead` : splitPath(logoRef).base);
+  }
+  state.hideMascots = true;
+
+  const music = get('music', 'url');
+  if (typeof music === 'string' && music) dropped.push(`the music (${splitPath(music).base})`);
+  if (get('border', 'color')) dropped.push('the tile border - CyberFoil marks focus with a fill, not an outline');
+  if (get('icons')) dropped.push('the icon sizes - CyberFoil keeps its own grid');
+  const ms = col('menu', 'selection', 'background', 'color'), ss = col('selection', 'background', 'color');
+  if (ms && ss && toHex(ms) !== toHex(ss)) dropped.push('the side menu\'s own selection colours - CyberFoil has one focus style');
+  const sys = (extras || []).filter(n => TINFOIL_SYSTEM_FILES.test(n));
+  if (sys.length) dropped.push(`${sys.length} HOME-menu or system patch file${sys.length === 1 ? '' : 's'} (${[...new Set(sys.map(n => n.split('.').pop().toLowerCase()))].join(', ')}) - not part of an app theme`);
+  if (missing.length) dropped.push(`files that could not be read: ${missing.join(', ')}`);
+  const adjusted = [];
+  await raiseForLegibility(adjusted);
+  state.report = {kind: 'Tinfoil', from: who.name, dropped, adjusted};
 }
 
 async function importBundle(bundle, folderGuess){
   const themeFiles = bundle.filter(f => /\.json$/i.test(f.base));
   if (!themeFiles.length){ alert('No theme JSON in that selection.'); return; }
-  /* theme.json first, shallowest first - a root-level CyberFoil .json too. */
-  themeFiles.sort((a, b) => (b.base.toLowerCase() === 'theme.json') - (a.base.toLowerCase() === 'theme.json') ||
-                            a.dir.split('/').length - b.dir.split('/').length);
+  /* theme.json or Tinfoil's settings.json first, shallowest first - and a
+     root-level CyberFoil .json too. */
+  const named = f => /^(theme|settings)\.json$/i.test(f.base);
+  themeFiles.sort((a, b) => named(b) - named(a) || a.dir.split('/').length - b.dir.split('/').length);
   const entry = themeFiles[0];
   let doc;
   try {
@@ -1860,7 +2039,9 @@ async function importBundle(bundle, folderGuess){
     try { return await f.dataUrl(); } catch (e) { return null; }
   };
   const folder = folderGuess || (entry.dir ? splitPath(entry.dir).base : entry.base.replace(/\.json$/i, ''));
-  if (looksLikeRomm(doc)){
+  if (looksLikeTinfoil(doc)){
+    await importTinfoil(doc, fetchFile, folder, bundle.map(f => f.base));
+  } else if (looksLikeRomm(doc)){
     await importRomm(doc, fetchFile, doc.name || folder);
   } else {
     const res = await importCyberFoil(doc, fetchFile);
@@ -1869,7 +2050,7 @@ async function importBundle(bundle, folderGuess){
     if (res.missing.length) notes.push('Named by the theme but not in what you picked:\n  ' + res.missing.join('\n  '));
     if (notes.length) setTimeout(() => alert('Theme imported.\n\n' + notes.join('\n\n')), 0);
   }
-  state.meta.folder = safeFolder(folder);
+  state.meta.folder = safeFolder(state.report && state.report.kind === 'Tinfoil' ? state.meta.name : folder);
   pushStateToInputs();
   render();
 }
@@ -1977,17 +2158,22 @@ async function fetchText(url){
   if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + url);
   return r.text();
 }
-async function fetchDataUrl(url, name){
-  const r = await fetch(url, {cache: 'no-cache'});
+async function fetchDataUrl(url, name, ms){
+  /* A theme that points at someone's old web host should cost a few seconds,
+     not hang the import. */
+  const r = await fetch(url, {cache: 'no-cache', signal: AbortSignal.timeout(ms || 20000)});
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return bytesToDataUrl(await r.arrayBuffer(), mimeFor(name));
 }
 
-let catalogRows = null;
+let catalogRows = null, catalogSrc = 'romm';
+const catalogCache = {};
+const TINFOIL_DB = 'https://raw.githubusercontent.com/A-Theme/Tinfoil-Themes/main/';
 function catalogMessage(html){ $('catBody').innerHTML = '<div class="cat-msg">' + html + '</div>'; }
 function openCatalog(){
   $('catBack').hidden = false;
   $('catSearch').value = '';
+  catalogRows = catalogCache[catalogSrc] || null;
   if (catalogRows){ renderCatalog(); $('catSearch').focus(); return; }
   loadCatalog();
 }
@@ -1996,9 +2182,25 @@ const closeCatalog = () => { $('catBack').hidden = true; };
 async function loadCatalog(){
   catalogMessage('Fetching the catalog&hellip;');
   try {
+    if (catalogSrc === 'tinfoil'){
+      /* The manifest the Tinfoil editor and Switch-Theme-Installer read: a list
+         of zip URLs, named the way the installer's derive_names() does. */
+      const doc = JSON.parse(await fetchText(TINFOIL_DB + 'themes.json'));
+      if (!doc || !Array.isArray(doc.themes)) throw new Error('themes.json has no "themes" array');
+      catalogRows = catalogCache.tinfoil = doc.themes.filter(u => typeof u === 'string' && /\.zip(\?|$)/i.test(u)).map(url => {
+        const folder = decodeURIComponent(url.split('?')[0].split('/').pop().replace(/\.zip$/i, ''));
+        const who = tinfoilName(folder);
+        const community = /\/Non_Aramaki_Themes\//.test(url);
+        return {url, folder, name: who.name, author: who.author || (community ? 'community' : ''), thumb: '', tinfoil: true,
+                bits: ['background', 'logo → banner', 'music (dropped)']};
+      });
+      renderCatalog();
+      $('catSearch').focus();
+      return;
+    }
     const doc = JSON.parse(await fetchText(CATALOG_BASE + 'manifest.json'));
     if (!doc || !Array.isArray(doc.themes)) throw new Error('manifest has no "themes" array');
-    catalogRows = doc.themes.filter(t => t && typeof t.folder === 'string' && t.folder && !FAT_BAD.test(t.folder)).map(t => ({
+    catalogRows = catalogCache.romm = doc.themes.filter(t => t && typeof t.folder === 'string' && t.folder && !FAT_BAD.test(t.folder)).map(t => ({
       folder: t.folder,
       name: typeof t.name === 'string' && t.name ? t.name : t.folder,
       author: typeof t.author === 'string' ? t.author : '',
@@ -2025,7 +2227,8 @@ function renderCatalog(){
   for (const e of rows){
     const row = document.createElement('div');
     row.className = 'cat-row';
-    row.innerHTML = `<div class="cat-sw">${e.thumb ? `<img loading="lazy" alt="" src="${esc(catalogPathUrl(e.thumb))}">` : ''}</div>` +
+    row.innerHTML = `<div class="cat-sw">${e.thumb ? `<img loading="lazy" alt="" src="${esc(catalogPathUrl(e.thumb))}">`
+      : `<span style="display:flex;height:100%;align-items:center;justify-content:center;font:600 13px var(--mono);color:#ff3c50;background:linear-gradient(135deg,#1b0d14,#0b1420)">${e.tinfoil ? 'TINFOIL' : ''}</span>`}</div>` +
       `<div class="cat-meta"><b>${esc(e.name)}</b><div class="who">${e.author ? 'by ' + esc(e.author) : 'unknown author'}</div>` +
       `<div class="sum">${esc(['colours', ...e.bits].join(' · '))}</div></div>`;
     const btn = document.createElement('button');
@@ -2042,6 +2245,19 @@ async function useCatalogTheme(entry, row, btn){
   btn.disabled = true;
   btn.textContent = 'Converting…';
   try {
+    if (entry.tinfoil){
+      /* GitHub Pages first, as the installer does; the same zip on the raw
+         host if Pages cannot be reached. */
+      const raw = TINFOIL_DB + entry.url.split('/Tinfoil-Themes/').pop();
+      let buf = null;
+      for (const u of [entry.url, raw]){
+        try { const r = await fetch(u, {cache: 'no-cache'}); if (r.ok){ buf = await r.arrayBuffer(); break; } } catch (e) {}
+      }
+      if (!buf) throw new Error('the zip could not be downloaded');
+      await importBundle(await bundleFromZip(new File([buf], entry.folder + '.zip')), entry.folder);
+      closeCatalog();
+      return;
+    }
     const doc = JSON.parse(await fetchText(themeFileUrl(entry.folder, 'theme.json')));
     await importRomm(doc, async name => {
       try { return await fetchDataUrl(themeFileUrl(entry.folder, name), name); } catch (e) { return null; }
@@ -2156,7 +2372,7 @@ function init(){
   $('oled').addEventListener('change', () => { state.oled = $('oled').checked; render(); });
   $('hideMascots').addEventListener('change', () => { state.hideMascots = $('hideMascots').checked; render(); });
   $('noAnime').addEventListener('change', () => { state.noAnime = $('noAnime').checked; render(); });
-  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.preview-panel .tabs button').forEach(b => b.addEventListener('click', () => {
     state.screen = b.dataset.screen;
     pushStateToInputs();
     render();
@@ -2172,7 +2388,12 @@ function init(){
 
   $('btnCatalog').addEventListener('click', openCatalog);
   $('catClose').addEventListener('click', closeCatalog);
-  $('catReload').addEventListener('click', () => { catalogRows = null; loadCatalog(); });
+  $('catReload').addEventListener('click', () => { catalogRows = catalogCache[catalogSrc] = null; loadCatalog(); });
+  document.querySelectorAll('.cat-tools .tabs button').forEach(b => b.addEventListener('click', () => {
+    catalogSrc = b.dataset.src;
+    document.querySelectorAll('.cat-tools .tabs button').forEach(x => x.classList.toggle('on', x === b));
+    openCatalog();
+  }));
   $('catSearch').addEventListener('input', () => { if (catalogRows) renderCatalog(); });
   $('catBack').addEventListener('mousedown', ev => { if (ev.target === $('catBack')) closeCatalog(); });
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('catBack').hidden) closeCatalog(); });

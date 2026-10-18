@@ -27,6 +27,17 @@ listed after the conversion. Run over all 160 themes in RomM-Themes, every one
 is listed by CyberFoil with all eleven colours and its images, and none fails a
 readability check.
 
+### Every Tinfoil theme, converted
+
+*Convert a theme* has a Tinfoil tab reading the Tinfoil-Themes database, and
+a Tinfoil `.zip` or folder imports the same way. Colours are read by what they
+do in Tinfoil's layout, the logo is fitted into the part of the banner both
+CyberFoil layouts show, BMPs are redrawn as PNG, and HOME-menu patch files are
+listed and left out. Where a see-through Tinfoil menu would leave text
+unreadable over its wallpaper, that bar's opacity is raised just far enough —
+its hue is kept — and the report says so. All 170 themes in the database
+convert and are listed by CyberFoil.
+
 ### Mascots, and "Remove anime"
 
 CyberFoil's two anime mascots can each take your own art or be hidden. A
