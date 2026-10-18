@@ -4,6 +4,48 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
+## 2.5.0
+
+### A third editor: CyberFoil
+
+[CyberFoil](https://github.com/luketanti/CyberFoil) 1.5.0 reads external
+themes, and `cyberfoil-theme-editor.html` makes them: eleven colour roles, a
+wallpaper, a banner, seventeen icons and two mascots, previewed on its main
+menu, SD card list, install queue and install screens, with an OLED-mode
+toggle for the other set of defaults. It installs as its own app and has a
+card on the launcher.
+
+### Every RomM theme, converted
+
+A RomM theme dropped into CyberFoil's theme folder does not show up at all —
+CyberFoil skips any theme whose `version` is not the number 1, and RomM themes
+carry version strings. The editor converts one instead: from the catalog, a
+folder or a pack. Roles are mapped so the pairs that decide legibility stay
+pairs, the background is darkened by the theme's own `dim` in the pixels, and
+the theme's font draws its banner. Everything CyberFoil has no slot for is
+listed after the conversion. Run over all 160 themes in RomM-Themes, every one
+is listed by CyberFoil with all eleven colours and its images, and none fails a
+readability check.
+
+### Mascots, and "Remove anime"
+
+CyberFoil's two anime mascots can each take your own art or be hidden. A
+theme cannot delete a built-in image — an empty path is refused and the
+built-in comes back — so hiding one ships a 1×1 transparent PNG, which
+CyberFoil accepts and draws as nothing. Converted RomM themes hide them by
+default. The preview has a **Remove anime** toggle for CyberFoil's setting of
+that name, which also draws the banner 113px further left; generated banners
+keep the theme's name in the part both layouts show.
+
+### Checked by CyberFoil's own loader
+
+The editor's verdicts — listed or not, under what name, which colours and
+images survive — come from a port of CyberFoil's `theme.cpp`.
+`tests/check-cyberfoil.mjs` compiles the real `theme.cpp` on the host and
+requires the port to agree with it on 5186 cases;
+`tests/check-cyberfoil-export.mjs` points the port at the editor's own
+exported packs.
+
 ## 2.4.0
 
 - **The catalog shows each theme's background.** A row used to carry four

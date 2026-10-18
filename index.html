@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1420">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="Aramaki's theme editors for Tinfoil and the RomM Switch client.">
+<meta name="description" content="Aramaki's theme editors for Tinfoil, the RomM Switch client and CyberFoil.">
 
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -33,7 +33,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg-0);color:var(--text-0);font-family:var(--sans);}
   body{min-height:100vh;display:flex;flex-direction:column;}
-  .wrap{max-width:980px;margin:0 auto;padding:48px 20px 40px;flex:1;width:100%;}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 20px 40px;flex:1;width:100%;}
 
   .head{text-align:center;margin-bottom:40px;}
   .head .mark{width:72px;height:72px;border-radius:16px;margin:0 auto 18px;overflow:hidden;
@@ -43,7 +43,8 @@
   .head h1{font-size:27px;margin:0 0 8px;letter-spacing:.2px;}
   .head p{margin:0;font-size:14.5px;color:var(--text-2);}
 
-  .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;}
+  .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
+  @media (max-width:980px){ .cards{grid-template-columns:repeat(2,minmax(0,1fr));} }
   @media (max-width:740px){ .cards{grid-template-columns:minmax(0,1fr);} }
 
   .card{
@@ -68,6 +69,7 @@
   }
   .tinfoil{--accent-c:var(--joy-red);}
   .romm{--accent-c:var(--joy-blue);}
+  .cyberfoil{--accent-c:var(--grape);}
 
   .foot{border-top:1px solid var(--line);padding:22px 20px 30px;text-align:center;
     font-size:12.5px;color:var(--text-2);line-height:1.7;}
@@ -82,7 +84,7 @@
     <div class="head">
       <div class="mark"><img src="assets/logo.png" alt="" onerror="this.parentNode.textContent='A'"></div>
       <h1>Aramaki's Theme Editors</h1>
-      <p>Two editors, two targets. Pick one.</p>
+      <p>Three editors, three targets. Pick one.</p>
     </div>
 
     <div class="cards">
@@ -125,15 +127,36 @@
         <span class="go">Open editor &rarr;</span>
       </a>
 
+      <a class="card cyberfoil" href="cyberfoil-theme-editor.html">
+        <div class="top">
+          <span class="dot"></span>
+          <div>
+            <h2>CyberFoil Theme Editor</h2>
+            <p class="sub">theme.json</p>
+          </div>
+        </div>
+        <p>For <strong>CyberFoil</strong>, the Switch installer. Recolour it,
+           swap its wallpaper, banner, icons and mascot &mdash; or turn any
+           RomM theme into one.</p>
+        <ul>
+          <li>Convert any published RomM theme</li>
+          <li>Preview its main menu, file list and install screens</li>
+          <li>Checked by a port of CyberFoil's own theme loader</li>
+          <li>Export a drop-in theme folder</li>
+        </ul>
+        <span class="go">Open editor &rarr;</span>
+      </a>
+
     </div>
   </div>
 
   <div class="foot">
     Everything runs locally &mdash; nothing you open is uploaded anywhere. The RomM
-    editor can download published themes from the catalog; it never sends yours.
+    and CyberFoil editors can download published themes from the catalog; they never send yours.
     <div class="links">
       <a href="https://github.com/A-Theme/Tinfoil-Themes">Tinfoil themes</a>&middot;
       <a href="https://github.com/A-Theme/RomM-Themes">RomM themes</a>&middot;
+      <a href="https://github.com/luketanti/CyberFoil">CyberFoil</a>&middot;
       <a href="https://github.com/A-Theme">A-Theme</a>
     </div>
   </div>
