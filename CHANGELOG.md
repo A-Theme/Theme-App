@@ -27,6 +27,16 @@ listed after the conversion. Run over all 160 themes in RomM-Themes, every one
 is listed by CyberFoil with all eleven colours and its images, and none fails a
 readability check.
 
+### Mascots, and "Remove anime"
+
+CyberFoil's two anime mascots can each take your own art or be hidden. A
+theme cannot delete a built-in image — an empty path is refused and the
+built-in comes back — so hiding one ships a 1×1 transparent PNG, which
+CyberFoil accepts and draws as nothing. Converted RomM themes hide them by
+default. The preview has a **Remove anime** toggle for CyberFoil's setting of
+that name, which also draws the banner 113px further left; generated banners
+keep the theme's name in the part both layouts show.
+
 ### Checked by CyberFoil's own loader
 
 The editor's verdicts — listed or not, under what name, which colours and

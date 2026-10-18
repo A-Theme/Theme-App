@@ -328,6 +328,9 @@
       <div class="panel">
         <h2>Icons &amp; mascot <span class="note" id="iconCount"></span></h2>
         <div class="body">
+          <label class="chk" style="margin-bottom:6px;"><input type="checkbox" id="hideMascots"> Hide CyberFoil's mascots where this theme has none of its own</label>
+          <p class="hint" style="margin:0 0 12px;">Or pick your own art in the Mascot slots below. Both are drawn at their own
+            size &mdash; the main menu's at 410,190, behind the tiles.</p>
           <div id="slotList"></div>
           <p class="hint" style="margin:12px 0 0;">Each one replaces the built-in image at that path. Transparent PNGs,
             square for the icons. Change both checkbox images or neither &mdash; a half-changed pair reads as two different controls.</p>
@@ -341,6 +344,7 @@
         <h2>Preview
           <span class="tabs">
             <label class="chk" title="CyberFoil's OLED mode setting changes several built-in colours"><input type="checkbox" id="oled"> OLED mode</label>
+            <label class="chk" title="CyberFoil's Remove anime setting hides both mascots and slides the banner 113px left"><input type="checkbox" id="noAnime"> Remove anime</label>
             <button data-screen="main" class="on">Main</button>
             <button data-screen="browser">SD card</button>
             <button data-screen="queue">Queue</button>
@@ -705,6 +709,11 @@ const SLOTS = [
   {g:'Mascot', k:'awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png', l:'Main menu mascot', size:'own size at 410,190'},
   {g:'Mascot', k:'awoos/7d8a05cddfef6da4901b20d2698d5a71.png', l:'Install mascot',   size:'own size at 510,166'}
 ];
+const MASCOT_SLOTS = SLOTS.filter(s => s.g === 'Mascot').map(s => s.k);
+/* A theme cannot remove an image, only replace it - and an empty path is
+   refused, so the built-in comes back. A 1x1 clear PNG is a replacement
+   CyberFoil accepts that draws nothing. */
+const CLEAR_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNgYGBgAAAABQABeqhXUAAAAABJRU5ErkJggg==';
 const SLOT_FILE = k => k.startsWith('awoos/5bbd') ? 'mascot-main'
                      : k.startsWith('awoos/7d8a') ? 'mascot-install'
                      : 'icons/' + k.slice(6).replace(/\.png$/, '');
@@ -824,7 +833,9 @@ const state = {
   banner: Object.assign(blankAsset(), {mode:'builtin'}),
   bannerFont: {name:'', dataUrl:''},
   images: {},                    /* slot key -> asset */
+  hideMascots: false,            /* swap CyberFoil's mascots for a clear pixel */
   oled:   false,
+  noAnime: false,                /* CyberFoil's "Remove anime" setting, for the preview */
   screen: 'main',
   report: null                   /* what the last RomM conversion could not carry */
 };
@@ -900,6 +911,7 @@ function buildPack(){
   const images = {};
   const put = (key, path, a) => {
     images[key] = path;
+    if (files.some(f => f.path === path)) return;   /* one file, several keys */
     files.push({path, dataUrl: a.dataUrl, size: a.size, image: a.decoded ? {w: a.w, h: a.h} : null, type: a.type});
   };
 
@@ -916,6 +928,8 @@ function buildPack(){
   for (const s of SLOTS){
     const a = state.images[s.k];
     if (a && a.dataUrl) put(s.k, SLOT_FILE(s.k) + '.' + extFor(a.type), a);
+    else if (state.hideMascots && MASCOT_SLOTS.includes(s.k))
+      put(s.k, 'mascot-none.png', {dataUrl: CLEAR_PIXEL, size: dataUrlSize(CLEAR_PIXEL), decoded: true, w: 1, h: 1, type: 'image/png'});
   }
   if (Object.keys(images).length) doc.images = images;
   return {doc, files, text: JSON.stringify(doc, null, 2) + '\n'};
@@ -993,18 +1007,22 @@ async function refreshBanner(){
   const ctx = cv.getContext('2d');
   const title = state.meta.name || folderName();
   /* The banner is drawn at y = -8 under a 74px header, so rows 8..82 are what
-     shows. The name sits in that band, left-aligned where CyberFoil's own
-     wordmark does, with an accent tick like the queue's. */
+     shows. CyberFoil's "Remove anime" setting draws it at x = -113 instead,
+     so only x >= 113 is safe in both modes: the name is right-aligned into
+     that part, with an accent tick like the queue's in front of it. */
+  const RIGHT = 466, SAFE = 113 + 14;
   let size = 46;
   ctx.textBaseline = 'middle';
   for (; size > 18; size -= 2){
     ctx.font = `700 ${size}px ${family}`;
-    if (ctx.measureText(title).width <= 480 - 40) break;
+    if (ctx.measureText(title).width <= RIGHT - SAFE - 16) break;
   }
+  const tw = Math.min(ctx.measureText(title).width, RIGHT - SAFE - 16);
+  const x = RIGHT - tw;
   ctx.fillStyle = cssRgba(cfPalette(st, '#FF4D4DFF'));
-  ctx.beginPath(); ctx.roundRect(14, 27, 5, 36, 2); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(x - 16, 27, 5, 36, 2); ctx.fill();
   ctx.fillStyle = cssRgba(cfPalette(st, '#FFFFFFFF'));
-  ctx.fillText(title, 30, 46);
+  ctx.fillText(title, x, 46, RIGHT - SAFE - 16);
   derived.banner = await assetFromDataUrl('banner', cv.toDataURL('image/png'));
   derived.bannerKey = key;
   render();
@@ -1111,14 +1129,17 @@ function drawPreview(){
   }
 
   const scr = state.screen;
-  if (scr === 'main') image('awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png', 410, 190);
+  /* mainPage.cpp: awooImage->SetVisible(!gayMode) - the "Remove anime" setting. */
+  if (scr === 'main' && !state.noAnime) image('awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png', 410, 190);
 
   /* ---- the frame every page builds ---- */
   rect(0, 0, 1280, 74, C('header', P(oled ? '#000000FF' : '#170909FF')));
   if (scr !== 'main') rect(0, 75, 1280, 60, C('panel', P(oled ? '#000000FF' : '#17090980')));
   rect(0, 660, 1280, 60, C('footer', P(oled ? '#000000FF' : '#17090980')));
-  image('logo.png', 0, -8, 480, 93, 'CyberFoil banner');
-  text('v' + CF_APP_VERSION, 480, 29, 22, P('#FFFFFFFF'));
+  /* With "Remove anime" on, every page builds the banner at -113 and the
+     version at 367 instead - the left 113px of the banner go off-screen. */
+  image('logo.png', state.noAnime ? -113 : 0, -8, 480, 93, 'CyberFoil banner');
+  text('v' + CF_APP_VERSION, state.noAnime ? 367 : 480, 29, 22, P('#FFFFFFFF'));
 
   /* Status cluster, laid out as MainApplication.cpp's applyStatus does. */
   const timeW = textW('12:34', 22), right = 1270, timeX = right - timeW;
@@ -1253,7 +1274,7 @@ function drawInstall(P, rect, text, image){
   const w = 850, h = 40, pcw = Math.trunc(0.42 * w);
   rect(10, 600, w, h, P('#222222FF'), Math.trunc(h / 3));
   rect(10, 600, Math.max(h, pcw), h, P('#FF4D4DFF'), Math.trunc(h / 3));
-  image('awoos/7d8a05cddfef6da4901b20d2698d5a71.png', 510, 166);
+  if (!state.noAnime) image('awoos/7d8a05cddfef6da4901b20d2698d5a71.png', 510, 166);
 }
 
 /* ===========================================================================
@@ -1347,6 +1368,15 @@ function renderChecks(){
   const logo = lastPack.files.find(f => f.path.startsWith('banner.'));
   if (logo && logo.image && Math.abs(logo.image.w / logo.image.h - 480 / 93) > 0.08){
     add('warn', `The banner is ${logo.image.w}×${logo.image.h}; it is stretched to 480×93.`);
+  }
+  const mascotKeys = MASCOT_SLOTS.filter(k => st.images.has(k));
+  if (mascotKeys.length){
+    add('info', 'CyberFoil looks for <code>awoo_main.png</code> and <code>awoo_inst.png</code> in <code>sdmc:/switch/CyberFoil/</code> ' +
+                'before the theme - if either exists, it wins over what this theme sets. Its <b>Remove anime</b> setting hides both.');
+  }
+  if (logo && state.banner.mode === 'image'){
+    add('info', 'With CyberFoil\'s <b>Remove anime</b> setting on, the banner is drawn 113px further left, so its left 113px are cut off. ' +
+                'Tick <b>Remove anime</b> above the preview to see it.');
   }
   const ticks = ['icons/checkbox-blank-outline.png', 'icons/check-box-outline.png'].map(k => st.images.has(k));
   if (ticks[0] !== ticks[1]) add('warn', 'Only one of the two checkbox images is replaced. CyberFoil\'s README asks for both.');
@@ -1524,6 +1554,8 @@ function pushStateToInputs(){
   $('bgDim').value = state.bg.dim;
   $('bnMode').value = state.banner.mode;
   $('oled').checked = state.oled;
+  $('hideMascots').checked = state.hideMascots;
+  $('noAnime').checked = state.noAnime;
   document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x.dataset.screen === state.screen));
 }
 
@@ -1714,6 +1746,7 @@ function resetState(){
   state.banner = Object.assign(blankAsset(), {mode:'builtin'});
   state.bannerFont = {name:'', dataUrl:''};
   state.images = {};
+  state.hideMascots = false;
   state.report = null;
 }
 
@@ -1744,6 +1777,7 @@ async function importCyberFoil(doc, fetchFile){
     const a = await assetFromDataUrl(splitPath(v).base, url);
     if (target === 'bg'){ Object.assign(state.bg, a, {mode: 'image', dim: 0}); }
     else if (target === 'banner'){ Object.assign(state.banner, a, {mode: 'image'}); }
+    else if (MASCOT_SLOTS.includes(target) && a.w === 1 && a.h === 1) state.hideMascots = true;
     else state.images[target] = a;
   }
   return {missing, ignored};
@@ -1785,6 +1819,9 @@ async function importRomm(doc, fetchFile, label){
     else { missing.push(fontName); dropped.push(`the font (${fontName})`); }
   }
   state.banner.mode = 'generate';
+  /* CyberFoil's anime mascots peek through its tiles; over a RomM theme's own
+     art they read as a mistake. The theme's own mascot, if any, still shows. */
+  state.hideMascots = true;
 
   const mascot = doc.assets && typeof doc.assets.mascot === 'string' ? doc.assets.mascot : '';
   if (mascot){
@@ -2030,7 +2067,7 @@ async function useCatalogTheme(entry, row, btn){
 const LS_KEY = 'cyberfoil-theme-editor-v1';
 function save(){
   try {
-    const slim = {meta: state.meta, colors: state.colors, oled: state.oled, screen: state.screen,
+    const slim = {meta: state.meta, colors: state.colors, oled: state.oled, screen: state.screen, hideMascots: state.hideMascots, noAnime: state.noAnime,
                   bg: {mode: state.bg.mode === 'image' ? 'builtin' : state.bg.mode, dim: state.bg.dim},
                   banner: {mode: state.banner.mode === 'image' ? 'builtin' : state.banner.mode}};
     localStorage.setItem(LS_KEY, JSON.stringify(slim));
@@ -2048,6 +2085,8 @@ function load(){
     if (s.bg && typeof s.bg.dim === 'number') state.bg.dim = s.bg.dim;
     if (s.banner && ['builtin', 'generate'].includes(s.banner.mode)) state.banner.mode = s.banner.mode;
     state.oled = s.oled === true;
+    state.hideMascots = s.hideMascots === true;
+    state.noAnime = s.noAnime === true;
     if (['main', 'browser', 'queue', 'install'].includes(s.screen)) state.screen = s.screen;
   } catch (e) {}
 }
@@ -2115,6 +2154,8 @@ function init(){
   $('bnFontClear').addEventListener('click', () => { state.bannerFont = {name: '', dataUrl: ''}; render(); });
 
   $('oled').addEventListener('change', () => { state.oled = $('oled').checked; render(); });
+  $('hideMascots').addEventListener('change', () => { state.hideMascots = $('hideMascots').checked; render(); });
+  $('noAnime').addEventListener('change', () => { state.noAnime = $('noAnime').checked; render(); });
   document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
     state.screen = b.dataset.screen;
     pushStateToInputs();

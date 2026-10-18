@@ -93,11 +93,34 @@ const results = await page.evaluate(async () => {
         'the picker lists the pack under its name', listed);
   const st = cfLoad(lastVfs.vfs, 'Probe/theme.json');
   check(st.colors.size === 11 && !st.ignored.length, 'all 11 colours survive the loader', {n: st.colors.size, ignored: st.ignored});
-  check(['background.jpg', 'logo.png', 'awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png'].every(k => st.images.has(k)) && st.images.size === 3,
+  check(['background.jpg', 'logo.png', 'awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png'].every(k => st.images.has(k)),
         'background, generated banner and mascot all survive the loader', [...st.images.keys()]);
+  check(st.images.get('awoos/7d8a05cddfef6da4901b20d2698d5a71.png') === 'theme/Probe/mascot-none.png' && st.images.size === 4,
+        'the install mascot the theme has no art for is hidden with a clear pixel CyberFoil accepts', [...st.images.entries()]);
+  const none = lastPack.files.find(f => f.path === 'mascot-none.png');
+  if (none){
+    const d = await decodeImage(none.dataUrl);
+    const cv = document.createElement('canvas'); cv.width = 1; cv.height = 1;
+    const c = cv.getContext('2d'); c.drawImage(d.img, 0, 0);
+    const px = [...c.getImageData(0, 0, 1, 1).data];
+    check(d.w === 1 && d.h === 1 && px[3] === 0, 'the clear pixel really is 1x1 and fully transparent', px);
+  }
   const doc = JSON.parse(lastPack.text);
   check(doc.version === 1 && doc.enabled === true, 'theme.json says version 1, as a number', doc.version);
   check(Object.values(doc.colors).every(v => cfParseColor(v)), 'every colour written is one CyberFoil parses');
+
+  /* ---- the generated banner survives "Remove anime", which draws it at x = -113 ---- */
+  const banner = lastPack.files.find(f => f.path === 'banner.png');
+  if (banner){
+    const d = await decodeImage(banner.dataUrl);
+    const cv = document.createElement('canvas'); cv.width = 480; cv.height = 93;
+    const c = cv.getContext('2d'); c.drawImage(d.img, 0, 0);
+    const px = c.getImageData(0, 0, 480, 93).data;
+    let hidden = 0, shown = 0;
+    for (let y = 0; y < 93; y++) for (let x = 0; x < 480; x++) if (px[(y * 480 + x) * 4 + 3]) (x < 113 ? hidden++ : shown++);
+    check(d.w === 480 && d.h === 93 && hidden === 0 && shown > 500,
+          'the generated banner is 480x93 and draws nothing in the 113px "Remove anime" cuts off', {hidden, shown});
+  }
 
   /* ---- what could not come across ---- */
   const dropped = (state.report && state.report.dropped || []).join(' | ');
@@ -113,8 +136,8 @@ const results = await page.evaluate(async () => {
   window.download = realDownload;
   check(zipBlob && zipName === 'Probe.zip', 'the pack downloads as Probe.zip', zipName);
   const entries = readZip(await zipBlob.arrayBuffer()).map(e => e.name).sort();
-  check(JSON.stringify(entries) === JSON.stringify(['Probe/background.png', 'Probe/banner.png', 'Probe/mascot-main.png', 'Probe/theme.json']),
-        'the zip holds the folder and exactly its four files', entries);
+  check(JSON.stringify(entries) === JSON.stringify(['Probe/background.png', 'Probe/banner.png', 'Probe/mascot-main.png', 'Probe/mascot-none.png', 'Probe/theme.json']),
+        'the zip holds the folder and exactly its five files', entries);
   const before = lastPack.text;
   await importBundle(await bundleFromZip(new File([zipBlob], 'Probe.zip')), 'Probe');
   await settled();
@@ -128,13 +151,13 @@ const results = await page.evaluate(async () => {
   check(state.meta.folder === 'loose', 'a root-level .json keeps its stem as the folder', state.meta.folder);
 
   /* ---- every screen paints ---- */
-  for (const oled of [false, true]) for (const scr of ['main', 'browser', 'queue', 'install']){
-    state.oled = oled; state.screen = scr; render();
+  for (const [oled, noAnime] of [[false, false], [true, false], [false, true]]) for (const scr of ['main', 'browser', 'queue', 'install']){
+    state.oled = oled; state.noAnime = noAnime; state.screen = scr; render();
     const px = $('screen').getContext('2d').getImageData(0, 0, 1280, 720).data;
     let lit = 0; for (let i = 3; i < px.length; i += 4 * 97) if (px[i]) lit++;
-    check(lit > 0, `the ${scr} screen paints${oled ? ' in OLED mode' : ''}`);
+    check(lit > 0, `the ${scr} screen paints${oled ? ' in OLED mode' : ''}${noAnime ? ' with Remove anime on' : ''}`);
   }
-  state.oled = false; state.screen = 'main';
+  state.oled = false; state.noAnime = false; state.screen = 'main';
 
   /* ---- every starting palette reads ---- */
   resetState();
