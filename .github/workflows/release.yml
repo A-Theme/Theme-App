@@ -67,7 +67,7 @@ jobs:
             --ignore='^[\\/]discord-embed\.json$' \
             --ignore='^[\\/]node_modules([\\/]|$)'
 
-      # The launcher and both editors must actually be in the bundle. A packager
+      # The launcher and all three editors must actually be in the bundle. A packager
       # ignore rule that is slightly too greedy produces an app that starts and
       # then cannot find its own pages, which is not obvious from a build log.
       - name: Verify the bundle
@@ -81,7 +81,7 @@ jobs:
           # one alone makes every grep -x miss.
           LIST=$(npx asar list "$APP" | tr -d '\r' | tr '\\' '/')
           echo "$LIST"
-          for f in /index.html /romm-theme-editor.html /tinfoil-theme-editor.html /main.js; do
+          for f in /index.html /romm-theme-editor.html /tinfoil-theme-editor.html /cyberfoil-theme-editor.html /manifest-cyberfoil.json /main.js; do
             echo "$LIST" | grep -qx "$f" || { echo "MISSING from bundle: $f"; exit 1; }
           done
           # And nothing that has no business shipping. The ignore patterns used
@@ -90,7 +90,7 @@ jobs:
           for f in /node_modules /tests /.github; do
             echo "$LIST" | grep -qx "$f" && { echo "SHOULD NOT BE BUNDLED: $f"; exit 1; }
           done
-          echo "bundle is clean: launcher, both editors, no stowaways"
+          echo "bundle is clean: launcher, three editors, no stowaways"
 
       - name: Zip
         shell: bash
