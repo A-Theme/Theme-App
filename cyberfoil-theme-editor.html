@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1420">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="A visual, in-browser editor for CyberFoil theme.json files, and a converter for RomM client themes.">
+
+<!-- PWA / Add to Home Screen. Its own manifest, so it installs as its own
+     app alongside the Tinfoil and RomM editors rather than replacing them. -->
+<link rel="manifest" href="manifest-cyberfoil.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CyberFoil Theme Editor">
+
+<title>Aramaki's Theme Editor — CyberFoil</title>
+<style>
+  :root{
+    --bg-0:#0b1420;
+    --bg-1:#101d2e;
+    --bg-2:#16263a;
+    --line:#22354d;
+    --text-0:#eaf1fa;
+    --text-1:#9db2c9;
+    --text-2:#5f7a94;
+    --joy-red:#ff3c50;
+    --joy-blue:#00c2ff;
+    --grape:#9d4edd;
+    --ok:#39d98a;
+    --warn:#ffb648;
+    --bad:#ff5c6c;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg-0);color:var(--text-0);font-family:var(--sans);}
+  body{min-height:100vh;}
+  .wrap{max-width:1480px;margin:0 auto;padding:24px 20px 80px;}
+
+  /* header */
+  .head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{width:38px;height:38px;border-radius:9px;flex:none;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--line);}
+  .brand .mark img{width:100%;height:100%;object-fit:cover;}
+  .brand h1{font-size:18px;margin:0;letter-spacing:.2px;}
+  .brand p{margin:1px 0 0;font-size:12.5px;color:var(--text-2);}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;}
+  button, .filebtn{
+    background:var(--bg-2);border:1px solid var(--line);color:var(--text-0);
+    padding:9px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-family:var(--sans);
+    display:inline-flex;align-items:center;gap:6px;transition:border-color .15s, background .15s;
+  }
+  button:hover,.filebtn:hover{border-color:var(--grape);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button.primary{background:linear-gradient(135deg,var(--grape),#6a1fb0);border-color:transparent;color:#fff;font-weight:600;}
+  button.primary:hover{filter:brightness(1.08);}
+  button.ghost{background:transparent;}
+  input[type=file]{display:none;}
+
+  /* layout - see the RomM editor for why the preview column stretches */
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start;}
+  .cols > .preview-col{align-self:stretch;}
+  @media (max-width:1080px){
+    .cols{grid-template-columns:minmax(0,1fr);}
+    .preview-panel{position:static;}
+  }
+
+  .panel{background:var(--bg-1);border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden;}
+  .panel > h2{
+    margin:0;padding:12px 16px;font-size:13px;font-weight:600;letter-spacing:.3px;
+    text-transform:uppercase;color:var(--text-1);background:var(--bg-2);
+    border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  }
+  .panel > h2 .note{text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;color:var(--text-2);}
+  .panel .body{padding:14px 16px;}
+
+  .field{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .field label{flex:0 0 130px;font-size:13px;color:var(--text-1);}
+  .field input[type=text],.field input[type=number],.field select{
+    flex:1;min-width:0;background:var(--bg-0);border:1px solid var(--line);color:var(--text-0);
+    padding:8px 10px;border-radius:7px;font-size:13px;font-family:var(--sans);
+  }
+  select{background:var(--bg-0);border:1px solid var(--line);color:var(--text-0);
+    padding:8px 10px;border-radius:7px;font-size:13px;font-family:var(--sans);}
+  .field input[type=range]{flex:1;min-width:0;accent-color:var(--grape);}
+  .field .val{flex:0 0 54px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--text-1);}
+  .hint{font-size:12px;color:var(--text-2);line-height:1.5;}
+  input:focus,select:focus{outline:2px solid var(--grape);outline-offset:1px;}
+
+  /* colour rows */
+  .crow{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+  .crow .swatch{
+    flex:none;width:30px;height:30px;border-radius:7px;border:1px solid var(--line);
+    padding:0;cursor:pointer;overflow:hidden;position:relative;
+    background:repeating-conic-gradient(#555 0% 25%, #999 0% 50%) 0 0/10px 10px;
+  }
+  .crow .swatch i{position:absolute;inset:0;}
+  .crow .swatch input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;padding:0;}
+  .crow .rname{flex:1;min-width:0;font-size:13px;font-family:var(--mono);color:var(--text-0);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .crow .rname small{display:block;font-family:var(--sans);font-size:11.5px;color:var(--text-2);
+    overflow:hidden;text-overflow:ellipsis;}
+  .crow input.hex{
+    flex:0 0 112px;background:var(--bg-0);border:1px solid var(--line);color:var(--text-0);
+    padding:7px 8px;border-radius:6px;font-size:12.5px;font-family:var(--mono);text-transform:uppercase;
+  }
+  .crow input.hex::placeholder{color:var(--text-2);text-transform:none;}
+  .crow input.hex.bad{border-color:var(--bad);}
+  .crow input.alpha{
+    flex:0 0 78px;-webkit-appearance:none;appearance:none;height:14px;margin:0;
+    border-radius:7px;border:1px solid var(--line);cursor:pointer;background:
+      repeating-conic-gradient(#555 0% 25%, #999 0% 50%) 0 0/8px 8px;
+  }
+  .crow input.alpha:disabled{opacity:.3;cursor:default;}
+  .crow input.alpha::-webkit-slider-thumb{
+    -webkit-appearance:none;width:12px;height:18px;border-radius:4px;
+    background:var(--text-0);border:1px solid var(--bg-0);cursor:pointer;
+  }
+  .crow input.alpha::-moz-range-thumb{
+    width:12px;height:18px;border-radius:4px;
+    background:var(--text-0);border:1px solid var(--bg-0);cursor:pointer;
+  }
+  .crow .reset{flex:none;background:none;border:none;color:var(--text-2);cursor:pointer;
+    font-size:15px;line-height:1;padding:4px 6px;border-radius:5px;}
+  .crow .reset:hover{color:var(--grape);background:var(--bg-2);}
+  .crow .reset:disabled{visibility:hidden;}
+  .crow.set .rname{color:#c9a2ff;}
+
+  /* image slots */
+  .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:8px;}
+  .slot{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--line);border-radius:9px;background:var(--bg-0);min-width:0;}
+  .slot.set{border-color:#5b3a86;}
+  .slot .thumb{flex:none;width:40px;height:40px;border-radius:6px;background:var(--bg-2);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:10px;color:var(--text-2);}
+  .slot .thumb img{max-width:100%;max-height:100%;}
+  .slot .sm{flex:1;min-width:0;}
+  .slot .sm b{display:block;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .slot .sm span{display:block;font-size:11px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .slot label.filebtn,.slot button{padding:5px 8px;font-size:11.5px;}
+
+  /* preview */
+  .preview-panel{position:sticky;top:16px;z-index:2;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .tabs button{padding:6px 11px;font-size:12.5px;}
+  .tabs button.on{border-color:var(--grape);background:var(--bg-0);color:#c9a2ff;}
+  .screen-outer{background:#000;border-radius:10px;overflow:hidden;border:1px solid var(--line);}
+  /* The Switch framebuffer is 1280x720 docked and handheld, so the canvas is
+     exactly that and CSS scales it - the real aspect ratio, the real sizes. */
+  #screen{display:block;width:100%;height:auto;aspect-ratio:1280/720;}
+  .legend{font-size:11.5px;color:var(--text-2);padding:8px 2px 0;line-height:1.5;}
+
+  /* findings */
+  .findings{list-style:none;margin:0;padding:0;}
+  .findings li{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.45;}
+  .findings li:last-child{border-bottom:none;}
+  .findings .tag{flex:none;font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:4px;
+    text-transform:uppercase;letter-spacing:.4px;height:18px;line-height:14px;}
+  .findings code{font-family:var(--mono);font-size:12px;color:var(--text-0);}
+  .tag.err{background:rgba(255,92,108,.16);color:var(--bad);}
+  .tag.warn{background:rgba(255,182,72,.16);color:var(--warn);}
+  .tag.ok{background:rgba(57,217,138,.16);color:var(--ok);}
+  .tag.info{background:rgba(157,78,221,.18);color:#c9a2ff;}
+
+  .out{width:100%;min-height:200px;background:var(--bg-0);border:1px solid var(--line);
+    color:var(--text-1);border-radius:8px;padding:12px;font-family:var(--mono);font-size:12px;
+    resize:vertical;line-height:1.5;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-1);cursor:pointer;}
+  .chk input{accent-color:var(--grape);}
+  .assetname{font-size:12px;color:var(--text-1);font-family:var(--mono);word-break:break-all;}
+  .group-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-2);
+    margin:14px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line);}
+  .group-label:first-child{margin-top:0;}
+  a{color:#c9a2ff;}
+  code{font-family:var(--mono);font-size:.92em;}
+
+  .report{border:1px solid #5b3a86;background:rgba(157,78,221,.08);border-radius:10px;padding:10px 12px;margin-bottom:16px;font-size:12.5px;color:var(--text-1);line-height:1.55;}
+  .report[hidden]{display:none;}
+  .report b{color:var(--text-0);}
+  .report ul{margin:6px 0 0;padding-left:18px;}
+
+  /* ---- catalog browser (the RomM catalog, converted on open) ----------- */
+  .cat-back{position:fixed;inset:0;z-index:60;background:rgba(3,8,14,.8);
+    display:flex;align-items:flex-start;justify-content:center;padding:34px 16px;overflow:auto;}
+  .cat-back[hidden]{display:none;}
+  .cat{background:var(--bg-1);border:1px solid var(--line);border-radius:14px;
+    width:100%;max-width:860px;box-shadow:0 26px 70px rgba(0,0,0,.62);overflow:hidden;}
+  .cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    padding:15px 18px;border-bottom:1px solid var(--line);background:var(--bg-2);}
+  .cat-head h3{margin:0;font-size:15px;}
+  .cat-head p{margin:3px 0 0;font-size:12px;color:var(--text-2);}
+  .cat-tools{padding:12px 18px 0;display:flex;gap:8px;align-items:center;}
+  .cat-tools input[type=search]{flex:1;background:var(--bg-0);border:1px solid var(--line);
+    color:var(--text-0);border-radius:8px;padding:9px 11px;font-size:13px;font-family:var(--sans);}
+  .cat-tools input[type=search]:focus{outline:none;border-color:var(--grape);}
+  .cat-body{padding:12px 18px 18px;max-height:64vh;overflow:auto;}
+  .cat-row{display:flex;align-items:center;gap:13px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:10px;background:var(--bg-2);margin-bottom:9px;}
+  .cat-row.busy{opacity:.55;}
+  .cat-sw{flex:none;width:96px;height:54px;border-radius:8px;border:1px solid var(--line);
+    overflow:hidden;background:var(--bg-0);}
+  .cat-sw img{width:100%;height:100%;display:block;object-fit:cover;}
+  .cat-meta{flex:1;min-width:0;}
+  .cat-meta b{font-size:14px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cat-meta .who{font-size:12px;color:var(--text-1);}
+  .cat-meta .sum{font-size:11.5px;color:var(--text-2);margin-top:2px;}
+  .cat-msg{font-size:13px;color:var(--text-1);padding:14px 2px;line-height:1.65;}
+  .cat-msg code{font-family:var(--mono);font-size:12px;color:var(--text-0);
+    background:var(--bg-0);padding:1px 5px;border-radius:4px;}
+  .foot{margin-top:26px;font-size:12px;color:var(--text-2);line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <div class="brand">
+      <div class="mark"><img src="assets/logo.png" alt="" onerror="this.parentNode.textContent='CF'"></div>
+      <div>
+        <h1>Aramaki's Theme Editor</h1>
+        <p>Build a <code>theme.json</code> for <strong>CyberFoil</strong> &mdash; or convert one of your RomM themes into one</p>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="btnCatalog" title="Open any published RomM theme, converted to CyberFoil's format">Convert a RomM theme</button>
+      <label class="filebtn" title="A CyberFoil or RomM theme.json, a .zip pack, or theme.json selected together with its files">Import theme<input type="file" id="importFile" multiple accept=".json,.zip,application/json,application/zip,image/*,.ttf,.otf"></label>
+      <label class="filebtn" title="Pick the theme's folder so its images come with it">Import folder<input type="file" id="importDir" webkitdirectory directory></label>
+      <button class="ghost" id="btnDefault">Reset to default</button>
+      <button id="btnJson">Download theme.json</button>
+      <button class="primary" id="btnPack">Download theme pack (.zip)</button>
+    </div>
+  </div>
+
+  <div class="report" id="report" hidden></div>
+
+  <div class="cols">
+
+    <!-- ================= LEFT: controls ================= -->
+    <div>
+      <div class="panel">
+        <h2>Theme details</h2>
+        <div class="body">
+          <div class="field"><label for="mName">Name</label>
+            <input type="text" id="mName" placeholder="My Theme" maxlength="120"></div>
+          <div class="field"><label for="mAuthor">Author</label>
+            <input type="text" id="mAuthor" placeholder="your name" maxlength="80"></div>
+          <div class="field"><label for="mFolder">SD folder</label>
+            <input type="text" id="mFolder" placeholder="My Theme" maxlength="80"></div>
+          <div class="field"><label></label><span class="hint" id="folderHint"></span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Colours <span class="note" id="setCount"></span></h2>
+        <div class="body">
+          <div class="row" style="margin-bottom:12px;">
+            <select id="presetSel" aria-label="Palette preset">
+              <option value="">Load a starting palette&hellip;</option>
+            </select>
+            <button id="btnPreset">Apply</button>
+          </div>
+          <p class="hint" style="margin:0 0 12px;">A role you leave unset is not a colour you forgot: CyberFoil
+            keeps its own value, and <code>highlight</code> and <code>scrollbar</code> follow
+            <code>accent</code>. The grey placeholder is what each one resolves to right now.</p>
+          <div id="colorList"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Background</h2>
+        <div class="body">
+          <div class="field"><label for="bgMode">Wallpaper</label>
+            <select id="bgMode">
+              <option value="builtin">CyberFoil's own</option>
+              <option value="none">none &mdash; just the background colour</option>
+              <option value="image">my image</option>
+            </select></div>
+          <div id="bgImageBox">
+            <div class="row" style="margin-bottom:12px;">
+              <label class="filebtn">Choose image&hellip;<input type="file" id="bgFile" accept="image/png,image/jpeg,image/webp"></label>
+              <button class="ghost" id="bgClear">Clear</button>
+              <span class="assetname" id="bgName">none</span>
+            </div>
+            <div class="field"><label for="bgDim">Darken</label>
+              <input type="range" id="bgDim" min="0" max="0.9" step="0.01" value="0">
+              <span class="val" id="bgDimVal">0.00</span></div>
+            <div class="field"><label></label><span class="hint">CyberFoil has no <code>dim</code> setting, so the editor
+              darkens the image itself when it exports: <code>c &times; (1 &minus; dim)</code>, the same multiply
+              the RomM client applies. Author at 1280&times;720 &mdash; the image is drawn at its own size, not scaled.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Banner</h2>
+        <div class="body">
+          <div class="field"><label for="bnMode">Logo banner</label>
+            <select id="bnMode">
+              <option value="builtin">CyberFoil's own</option>
+              <option value="generate">generate from the theme name</option>
+              <option value="image">my image</option>
+            </select></div>
+          <div id="bnImageBox" class="row" style="margin-bottom:12px;">
+            <label class="filebtn">Choose image&hellip;<input type="file" id="bnFile" accept="image/png,image/jpeg,image/webp"></label>
+            <button class="ghost" id="bnClear">Clear</button>
+            <span class="assetname" id="bnName">none</span>
+          </div>
+          <div id="bnGenBox">
+            <div class="row" style="margin-bottom:12px;">
+              <label class="filebtn">Font for the banner&hellip;<input type="file" id="bnFont" accept=".ttf,.otf,font/ttf,font/otf"></label>
+              <button class="ghost" id="bnFontClear">Clear</button>
+              <span class="assetname" id="bnFontName">system font</span>
+            </div>
+            <div class="field"><label></label><span class="hint">CyberFoil keeps its own UI font, so the banner is the one place
+              a theme's typeface can still appear. The font is used to draw it here and does not ship.</span></div>
+          </div>
+          <div class="field"><label></label><span class="hint">Drawn at 0,&minus;8 and fitted to 480&times;93 whatever its size,
+            so a banner of any other shape is stretched.</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Icons &amp; mascot <span class="note" id="iconCount"></span></h2>
+        <div class="body">
+          <div id="slotList"></div>
+          <p class="hint" style="margin:12px 0 0;">Each one replaces the built-in image at that path. Transparent PNGs,
+            square for the icons. Change both checkbox images or neither &mdash; a half-changed pair reads as two different controls.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= RIGHT: preview ================= -->
+    <div class="preview-col">
+      <div class="panel preview-panel">
+        <h2>Preview
+          <span class="tabs">
+            <label class="chk" title="CyberFoil's OLED mode setting changes several built-in colours"><input type="checkbox" id="oled"> OLED mode</label>
+            <button data-screen="main" class="on">Main</button>
+            <button data-screen="browser">SD card</button>
+            <button data-screen="queue">Queue</button>
+            <button data-screen="install">Install</button>
+          </span>
+        </h2>
+        <div class="screen-outer"><canvas id="screen" width="1280" height="720"></canvas></div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Checks <span class="note" id="checkSummary"></span></h2>
+        <div class="body"><ul class="findings" id="findings"></ul></div>
+      </div>
+
+      <div class="panel">
+        <h2>theme.json</h2>
+        <div class="body">
+          <textarea class="out" id="jsonOut" readonly spellcheck="false"></textarea>
+          <div class="row" style="margin-top:10px;">
+            <button id="btnCopy">Copy to clipboard</button>
+            <span class="hint" id="copyNote"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <strong>Installing:</strong> the pack unzips to a folder &mdash; drop the whole folder into
+    <code>sdmc:/switch/CyberFoil/theme/</code> on your SD card, then pick it in
+    <strong>Settings &rarr; System &rarr; Theme</strong>. It applies at once, no restart.
+    A theme with no images can also go in as a single <code>.json</code> file straight inside <code>theme/</code>.
+    <br>
+    Everything here runs in your browser. No file you choose is uploaded anywhere. CyberFoil's own
+    artwork in the preview is loaded from <a href="https://github.com/luketanti/CyberFoil" target="_blank" rel="noopener">luketanti/CyberFoil</a>
+    and is not part of this editor.
+  </div>
+</div>
+
+<!-- ======================= catalog browser ======================= -->
+<div class="cat-back" id="catBack" hidden role="dialog" aria-modal="true" aria-labelledby="catTitle">
+  <div class="cat">
+    <div class="cat-head">
+      <div>
+        <h3 id="catTitle">Convert a RomM theme</h3>
+        <p>Published themes from
+          <a href="https://github.com/A-Theme/RomM-Themes/tree/main/themes" target="_blank" rel="noopener">A-Theme/RomM-Themes</a>.
+          Opening one maps its 19 roles onto CyberFoil's 11, darkens its background by its own <code>dim</code>,
+          and draws a banner in its font.</p>
+      </div>
+      <button class="ghost" id="catClose" aria-label="Close">Close</button>
+    </div>
+    <div class="cat-tools">
+      <input type="search" id="catSearch" placeholder="Filter by name or author&hellip;" autocomplete="off">
+      <button class="ghost" id="catReload">Reload</button>
+    </div>
+    <div class="cat-body" id="catBody"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ===========================================================================
+   A port of CyberFoil's theme loader: source/util/theme.cpp in
+   luketanti/CyberFoil, at the commit CF_SOURCE names.
+
+   Everything the editor claims about a theme - whether CyberFoil will list it,
+   what it is called in the picker, which colours and images survive, what an
+   unset role falls back to - comes from these functions and nothing else, and
+   tests/check-cyberfoil.mjs holds them to the C++ row by row. So when the
+   preview and the console disagree, the fix belongs here and in the test, not
+   in a special case somewhere downstream.
+
+   Two things the C++ gets from its platform are made explicit:
+
+     - the file system is a `vfs`: a Map of '/'-separated paths, relative to
+       sdmc:/switch/CyberFoil, onto {size, text?, image?}. `image` is the
+       decoded {w, h}, or null for a file that does not decode - which is
+       exactly what IMG_Load reports to ValidImage.
+     - strings are measured in UTF-8 BYTES, because std::string is bytes: a
+       name of 41 'é' is 82 bytes long and over the 80 the picker allows.
+   =========================================================================== */
+const CF_SOURCE = 'e25d2bd76270a11c921aa0e72cac8cb8bc50cfab';
+const CF_MANIFEST_MAX = 256 * 1024;          /* ReadManifest */
+const CF_IMAGE_MAX_BYTES = 16 * 1024 * 1024; /* ValidImage */
+const CF_IMAGE_MAX_SIDE = 4096;
+const CF_IMAGE_PREFIX = 'romfs:/images/';
+
+const cfUtf8 = new TextEncoder();
+const cfBytes = s => cfUtf8.encode(s);
+
+/** std::string's operator< - a byte compare, which is NOT JS's UTF-16 order. */
+function cfCompare(a, b){
+  const x = cfBytes(a), y = cfBytes(b);
+  const n = Math.min(x.length, y.length);
+  for (let i = 0; i < n; i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+
+/* std::filesystem::path, POSIX, for the handful of members theme.cpp uses. */
+const cfParts = p => p.split('/').filter(Boolean);
+function cfFilename(p){
+  if (p.endsWith('/')) return '';
+  return p.slice(p.lastIndexOf('/') + 1);
+}
+function cfExtension(p){
+  const f = cfFilename(p);
+  if (f === '.' || f === '..') return '';
+  const dot = f.lastIndexOf('.');
+  return dot <= 0 ? '' : f.slice(dot);   /* a leading dot is part of the stem */
+}
+function cfStem(p){
+  const f = cfFilename(p), e = cfExtension(p);
+  return e ? f.slice(0, f.length - e.length) : f;
+}
+const cfParent = p => { const i = p.lastIndexOf('/'); return i < 0 ? '' : p.slice(0, i); };
+
+/** A vfs entry by path, or null. A directory is implied by any file under it. */
+function cfStat(vfs, path){
+  const norm = cfParts(path).filter(s => s !== '.').join('/');
+  if (vfs.has(norm)) return {file: true, ...vfs.get(norm)};
+  const prefix = norm + '/';
+  for (const k of vfs.keys()) if (k.startsWith(prefix)) return {file: false};
+  return null;
+}
+
+/* Plutonium's Color::FromHex. Only ever handed strings ParseColor accepted or
+   literals from CyberFoil's own source, so it does no validation of its own. */
+function cfFromHex(hex){
+  const pair = (i, dflt) => hex.length >= i + 2 ? parseInt(hex.slice(i, i + 2), 16) : dflt;
+  if (hex.length >= 7) return {r: pair(1), g: pair(3), b: pair(5), a: hex.length >= 9 ? pair(7) : 255};
+  return {r: 0, g: 0, b: 0, a: hex.length >= 9 ? pair(7) : 255};
+}
+
+/** ParseColor: '#' and exactly 6 or 8 hex digits. No #RGB, no bare digits. */
+function cfParseColor(value){
+  if (typeof value !== 'string') return null;
+  const b = cfBytes(value);
+  if ((b.length !== 7 && b.length !== 9) || b[0] !== 0x23) return null;
+  for (let i = 1; i < b.length; i++){
+    const c = b[i];
+    const hex = (c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66);
+    if (!hex) return null;
+  }
+  return cfFromHex(b.length === 7 ? value + 'FF' : value);
+}
+
+function cfValidManifestPath(file){
+  if (!file || file.includes(':') || file.includes('\\')) return false;
+  if (file.startsWith('/') || cfExtension(file) !== '.json') return false;
+  return !cfParts(file).includes('..');
+}
+
+/**
+ * ReadManifest: the parsed root, or null for anything CyberFoil leaves out of
+ * the picker. `version`, when present, has to be the NUMBER 1 - which is why a
+ * RomM theme.json ("version": "1.2.0") is invisible to CyberFoil as it stands.
+ */
+function cfReadManifest(vfs, path){
+  const st = cfStat(vfs, path);
+  if (!st || !st.file || !st.size || st.size > CF_MANIFEST_MAX) return null;
+  let root;
+  try {
+    let text = typeof st.text === 'string' ? st.text : '';
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);   /* nlohmann skips a BOM */
+    root = JSON.parse(text);
+  } catch (e) { return null; }
+  if (!root || typeof root !== 'object' || Array.isArray(root)) return null;
+  if ('version' in root && root.version !== 1) return null;
+  if ('enabled' in root && root.enabled !== true) return null;
+  return root;
+}
+
+function cfManifestName(root, fallback){
+  if (typeof root.name === 'string' && root.name && cfBytes(root.name).length <= 80) return root.name;
+  return fallback;
+}
+
+/** ValidImage: the full path when CyberFoil would use the file, else ''. */
+function cfValidImage(vfs, directory, relative){
+  if (!relative || relative.includes(':') || relative.includes('\\') || relative.startsWith('/')) return '';
+  if (cfParts(relative).includes('..')) return '';
+  const full = directory + '/' + relative;
+  const st = cfStat(vfs, full);
+  if (!st || !st.file || !st.size || st.size > CF_IMAGE_MAX_BYTES) return '';
+  const im = st.image;
+  if (!im) return '';
+  return (im.w > 0 && im.h > 0 && im.w <= CF_IMAGE_MAX_SIDE && im.h <= CF_IMAGE_MAX_SIDE) ? full : '';
+}
+
+/** nlohmann iterates an object in key order - byte order - not insertion order. */
+const cfItems = obj => Object.keys(obj).sort(cfCompare).map(k => [k, obj[k]]);
+
+/** Discover: what the Settings > System > Theme picker lists, in its order. */
+function cfDiscover(vfs){
+  const children = new Map();
+  for (const k of vfs.keys()){
+    if (!k.startsWith('theme/')) continue;
+    const rest = k.slice(6), cut = rest.indexOf('/');
+    const name = cut < 0 ? rest : rest.slice(0, cut);
+    if (!name) continue;
+    if (cut < 0) children.set(name, 'file');
+    else if (!children.has(name) || children.get(name) !== 'file') children.set(name, 'dir');
+  }
+  const out = [];
+  const add = (path, file) => {
+    if (!cfValidManifestPath(file)) return;
+    const root = cfReadManifest(vfs, path);
+    if (root) out.push({file, name: cfManifestName(root, cfStem(file))});
+  };
+  for (const [name, kind] of children){
+    if (kind === 'file' && cfExtension(name) === '.json') add('theme/' + name, name);
+    else if (kind === 'dir') add('theme/' + name + '/theme.json', name + '/theme.json');
+  }
+  out.sort((a, b) => a.name === b.name ? cfCompare(a.file, b.file) : cfCompare(a.name, b.name));
+  return out;
+}
+
+/** Load: the theme state every lookup below reads. */
+function cfLoad(vfs, selected){
+  const st = {colors: new Map(), images: new Map(), name: 'Default', noBg: false, ignored: []};
+  if (selected === undefined) selected = 'theme.json';
+  if (!cfValidManifestPath(selected)) return st;
+  const manifest = 'theme/' + selected;
+  const directory = cfParent(manifest);
+  const root = cfReadManifest(vfs, manifest);
+  if (!root) return st;
+  if (root.colors && typeof root.colors === 'object' && !Array.isArray(root.colors)){
+    for (const [k, v] of cfItems(root.colors)){
+      const c = cfParseColor(v);
+      if (c) st.colors.set(k, c);
+      else st.ignored.push({kind: 'color', key: k});
+    }
+  }
+  if (root.images && typeof root.images === 'object' && !Array.isArray(root.images)){
+    for (const [k0, v] of cfItems(root.images)){
+      if (typeof v !== 'string') { st.ignored.push({kind: 'image', key: k0}); continue; }
+      let key = k0;
+      if (key === 'background') key = 'background.jpg';
+      if (key === 'logo') key = 'logo.png';
+      if (key === 'background.jpg' && v === '') { st.noBg = true; continue; }
+      const image = cfValidImage(vfs, directory, v);
+      if (image) st.images.set(key, image);
+      else st.ignored.push({kind: 'image', key: k0, value: v});
+    }
+  }
+  st.name = cfManifestName(root, cfStem(manifest));
+  return st;
+}
+
+function cfTint(st, role, fallback){
+  const found = st.colors.get(role);
+  if (!found) return fallback;
+  return {r: found.r, g: found.g, b: found.b, a: Math.floor(found.a * fallback.a / 255)};
+}
+
+/** Color(role, fallback): a set role exactly; highlight and scrollbar follow accent. */
+function cfColor(st, role, fallback){
+  const found = st.colors.get(role);
+  if (found) return found;
+  if (role === 'highlight' || role === 'scrollbar') return cfTint(st, 'accent', fallback);
+  return fallback;
+}
+
+/**
+ * Palette(hex): every COLOR("#...") literal in CyberFoil's UI goes through
+ * this, which is how a theme recolours elements that never name a role. The
+ * mapping is on the literal's RGB, so the same red is "accent" everywhere.
+ */
+function cfPalette(st, hex){
+  const fallback = cfFromHex(hex);
+  const rgb = hex.slice(0, 7);
+  if (rgb === '#FFFFFF' && fallback.a === 255) return cfColor(st, 'text', fallback);
+  if (rgb === '#A8A8B8') return cfTint(st, 'muted_text', fallback);
+  if (rgb === '#FF4D4D' || rgb === '#FF7777' || rgb === '#FF9999') return cfTint(st, 'accent', fallback);
+  if (rgb === '#170909' || rgb === '#17171C' || rgb === '#222228' || rgb === '#1A1A1A' ||
+      (rgb === '#000000' && (fallback.a === 204 || fallback.a === 238))) return cfTint(st, 'panel', fallback);
+  if (rgb === '#222222') return cfColor(st, 'progress_track', fallback);
+  return fallback;
+}
+
+/** Asset(defaultPath): the theme's file for a romfs image, or the default. */
+function cfAsset(st, defaultPath){
+  if (!defaultPath.startsWith(CF_IMAGE_PREFIX)) return defaultPath;
+  return st.images.get(defaultPath.slice(CF_IMAGE_PREFIX.length)) || defaultPath;
+}
+
+/**
+ * ApplyBackground: the layout's colour and image. `legacy` is whether
+ * sdmc:/switch/CyberFoil/background.png exists - the pre-theme way of setting a
+ * wallpaper, which still applies when a theme says nothing about backgrounds.
+ */
+function cfApplyBackground(st, oled, legacy){
+  const out = {color: cfColor(st, 'background', cfFromHex(oled ? '#000000FF' : '#670000FF')), image: ''};
+  const bg = st.images.get('background.jpg');
+  if (bg && !st.noBg) out.image = bg;
+  else if (!st.colors.has('background') && !st.noBg && !oled)
+    out.image = legacy ? 'background.png' : 'romfs:/images/background.jpg';
+  return out;
+}
+
+/* ===========================================================================
+   What CyberFoil's UI is made of.
+
+   The 11 roles are the ones its README documents and theme.cpp reads. `fb` is
+   the built-in value each role falls back to WHERE IT MATTERS MOST - the
+   literal at that element in CyberFoil's source, passed through Palette()
+   exactly as the source does - so the placeholder beside an unset role is what
+   that role really resolves to with the other roles as they stand.
+   =========================================================================== */
+const CF_APP_VERSION = '1.5.0';   /* APP_VERSION in CyberFoil's Makefile, for the mock header */
+const CF_RAW = `https://raw.githubusercontent.com/luketanti/CyberFoil/${CF_SOURCE}/romfs/images/`;
+
+const ROLES = [
+  {k:'background',     t:'Layout background - setting it also switches off the built-in wallpaper',
+   fb:(st, o) => cfColor(st, 'background', cfFromHex(o ? '#000000FF' : '#670000FF'))},
+  {k:'header',         t:'Top bar',
+   fb:(st, o) => cfColor(st, 'header', cfPalette(st, o ? '#000000FF' : '#170909FF'))},
+  {k:'footer',         t:'Bottom bar, behind the button hints',
+   fb:(st, o) => cfColor(st, 'footer', cfPalette(st, o ? '#000000FF' : '#17090980'))},
+  {k:'panel',          t:'Info bars, menu tiles, queue cards',
+   fb:(st, o) => cfColor(st, 'panel', cfPalette(st, o ? '#1A1A1ACC' : '#170909CC'))},
+  {k:'text',           t:'Labels and menu text',
+   fb:(st) => cfPalette(st, '#FFFFFFFF')},
+  {k:'selected_text',  t:'The focused row or tile',
+   fb:(st) => cfColor(st, 'selected_text', cfPalette(st, '#FFFFFFFF'))},
+  {k:'muted_text',     t:'Secondary queue labels',
+   fb:(st) => cfPalette(st, '#A8A8B8FF')},
+  {k:'accent',         t:'Progress, accents; tints highlight and scrollbar when they are unset',
+   fb:(st) => cfPalette(st, '#FF4D4DFF')},
+  {k:'highlight',      t:'Focus fill behind the selected tile or row',
+   fb:(st, o) => cfColor(st, 'highlight', cfPalette(st, o ? '#FF4D4D66' : '#FF4D4D88'))},
+  {k:'scrollbar',      t:'Menu scrollbar',
+   fb:(st, o) => cfColor(st, 'scrollbar', cfPalette(st, o ? '#FFFFFF66' : '#17090980'))},
+  {k:'progress_track', t:'Unfilled part of the install bar',
+   fb:(st) => cfPalette(st, '#222222FF')}
+];
+const ROLE_KEYS = ROLES.map(r => r.k);
+
+/* Every image CyberFoil lets a theme replace, by its path under romfs/images/
+   - which is also the key it takes in "images". `size` is how it is drawn. */
+const SLOTS = [
+  {g:'Main menu', k:'icons/remote.png',            l:'Remote',               size:'96×96 tile'},
+  {g:'Main menu', k:'icons/micro-sd.png',          l:'SD card',              size:'96×96 tile'},
+  {g:'Main menu', k:'icons/usb-install.png',       l:'USB SSD/HDD',          size:'96×96 tile'},
+  {g:'Main menu', k:'icons/usb-port.png',          l:'MTP / NS-USBloader',   size:'96×96 tile'},
+  {g:'Main menu', k:'icons/cloud-download.png',    l:'LAN / internet',       size:'96×96 tile'},
+  {g:'Main menu', k:'icons/save-data-cloud.png',   l:'Backup save data',     size:'96×96 tile'},
+  {g:'Main menu', k:'icons/settings.png',          l:'Settings',             size:'96×96 tile'},
+  {g:'Main menu', k:'icons/exit-run.png',          l:'Exit',                 size:'96×96 tile'},
+  {g:'File lists', k:'icons/folder.png',           l:'Folder',               size:'40×40 row'},
+  {g:'File lists', k:'icons/folder-upload.png',    l:'Parent folder',        size:'40×40 row'},
+  {g:'File lists', k:'icons/checkbox-blank-outline.png', l:'Checkbox, empty', size:'40×40 row'},
+  {g:'File lists', k:'icons/check-box-outline.png', l:'Checkbox, ticked',    size:'40×40 row'},
+  {g:'Remote & queue', k:'icons/title-placeholder.png', l:'Missing cover',   size:'44×44 row'},
+  {g:'Remote & queue', k:'icons/title_selected.png', l:'Selected title',     size:'Remote grid'},
+  {g:'Waiting screens', k:'icons/lan-connection-waiting.png',    l:'LAN waiting',    size:'360×139'},
+  {g:'Waiting screens', k:'icons/remote-connection-waiting.png', l:'Remote waiting', size:'360×139'},
+  {g:'Waiting screens', k:'icons/usb-connection-waiting.png',    l:'USB waiting',    size:'360×86'},
+  {g:'Mascot', k:'awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png', l:'Main menu mascot', size:'own size at 410,190'},
+  {g:'Mascot', k:'awoos/7d8a05cddfef6da4901b20d2698d5a71.png', l:'Install mascot',   size:'own size at 510,166'}
+];
+const SLOT_FILE = k => k.startsWith('awoos/5bbd') ? 'mascot-main'
+                     : k.startsWith('awoos/7d8a') ? 'mascot-install'
+                     : 'icons/' + k.slice(6).replace(/\.png$/, '');
+
+/* CyberFoil's README: "PNG, JPEG, and WebP work through the bundled image decoder". */
+const IMAGE_TYPES = {'image/png':'png', 'image/jpeg':'jpg', 'image/webp':'webp'};
+
+/* ---------------------------------------------------------------------------
+   Colour helpers. The editor is lenient about what you TYPE - #RGB, a missing
+   '#', any case - and strict about what it WRITES: always '#RRGGBB' or
+   '#RRGGBBAA', the only forms cfParseColor accepts.
+   --------------------------------------------------------------------------- */
+function parseHex(text){
+  if (typeof text !== 'string') return null;
+  let s = text.trim();
+  if (s.startsWith('#')) s = s.slice(1);
+  if (!/^[0-9a-fA-F]+$/.test(s)) return null;
+  const exp = d => { const v = parseInt(d,16); return v*16+v; };
+  const pair = i => parseInt(s.slice(i,i+2),16);
+  if (s.length === 3) return {r:exp(s[0]), g:exp(s[1]), b:exp(s[2]), a:255};
+  if (s.length === 4) return {r:exp(s[0]), g:exp(s[1]), b:exp(s[2]), a:exp(s[3])};
+  if (s.length === 6) return {r:pair(0), g:pair(2), b:pair(4), a:255};
+  if (s.length === 8) return {r:pair(0), g:pair(2), b:pair(4), a:pair(6)};
+  return null;
+}
+const h2 = n => n.toString(16).toUpperCase().padStart(2,'0');
+const toHex = c => '#' + h2(c.r) + h2(c.g) + h2(c.b) + (c.a === 255 ? '' : h2(c.a));
+const cssRgba = c => `rgba(${c.r},${c.g},${c.b},${(c.a/255).toFixed(3)})`;
+const withAlpha = (c, a) => ({r:c.r, g:c.g, b:c.b, a});
+
+function luminance(c){
+  const ch = v => { v /= 255; return v <= 0.04045 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+  return 0.2126*ch(c.r) + 0.7152*ch(c.g) + 0.0722*ch(c.b);
+}
+function contrast(a, b){
+  const la = luminance(a), lb = luminance(b);
+  return (Math.max(la,lb) + 0.05) / (Math.min(la,lb) + 0.05);
+}
+/** `c` drawn over `under` with SDL's blend - straight alpha, src-over. */
+function over(c, under){
+  const a = c.a / 255;
+  return {r: Math.round(c.r * a + under.r * (1 - a)),
+          g: Math.round(c.g * a + under.g * (1 - a)),
+          b: Math.round(c.b * a + under.b * (1 - a)), a: 255};
+}
+
+/* ===========================================================================
+   RomM -> CyberFoil.
+
+   CyberFoil has 11 roles where the RomM client has 19, so the conversion is a
+   choice about which RomM role plays each part, made once here and nowhere
+   else. The pairs that decide legibility are kept as pairs: the focused label
+   is text_strong on surface_hover in both, body text is text on
+   surface_raised. Across the 160 published RomM themes, every focused label
+   clears 4.5:1 under this mapping.
+   =========================================================================== */
+const ROMM_DEFAULTS = {
+  bg:'#140D0C', surface:'#1C1210', surface_raised:'#281B18', surface_hover:'#372622',
+  border:'#4E3933', text:'#E8DCD2', text_strong:'#FAF0E6', text_muted:'#A89288',
+  text_disabled:'#786058', text_on_accent:'#FAF0E6', accent:'#D24637', accent_hover:'#EE6858',
+  accent_alt:'#E68250', focus_ring:'#E68250', success:'#5EB270', warning:'#E2AD4A',
+  danger:'#D6544A', info:'#689ED4', scrim:'#000000BE'
+};
+const ROMM_TO_CF = {
+  background:     ['bg',             c => withAlpha(c, 255)],   /* the client ignores bg's alpha */
+  header:         ['surface',        c => c],
+  footer:         ['surface',        c => c],
+  panel:          ['surface_raised', c => c],
+  text:           ['text',           c => c],
+  selected_text:  ['text_strong',    c => c],
+  muted_text:     ['text_muted',     c => c],
+  accent:         ['accent',         c => c],
+  highlight:      ['surface_hover',  c => c],
+  scrollbar:      ['accent',         c => withAlpha(c, 0x80)],
+  progress_track: ['border',         c => c]
+};
+function rommColors(romm){
+  const out = {};
+  for (const [cf, [rk, f]] of Object.entries(ROMM_TO_CF)){
+    const c = parseHex(romm && romm[rk]) || parseHex(ROMM_DEFAULTS[rk]);
+    out[cf] = toHex(f(c));
+  }
+  return out;
+}
+
+/* Starting palettes: the RomM editor's twenty, mapped the same way - so a
+   theme that exists in both formats starts from the same look in both. */
+const ROMM_PRESETS = {
+  'Midnight Borb': {bg:'#07080F', surface:'#0D101C', surface_raised:'#141A2C', surface_hover:'#1E263F', border:'#2C3654', text:'#E4E9F7', text_strong:'#FFFFFF', text_muted:'#8C97B8', accent:'#4C8DFF'},
+  'Blueprint':     {bg:'#071A2E', surface:'#0B2340', surface_raised:'#0F2D50', surface_hover:'#163C68', border:'#1E4E85', text:'#D6E9FF', text_strong:'#FFFFFF', text_muted:'#87ACD4', accent:'#2EA8F0'},
+  'Deep Sea':      {bg:'#04121C', surface:'#071C2A', surface_raised:'#0A2536', surface_hover:'#103349', border:'#17475F', text:'#D4EDF7', text_strong:'#FFFFFF', text_muted:'#83B1C7', accent:'#20D4D4'},
+  'Ultraviolet':   {bg:'#0A0618', surface:'#120B26', surface_raised:'#191036', surface_hover:'#26194E', border:'#38266B', text:'#E4DEFF', text_strong:'#FFFFFF', text_muted:'#A093D1', accent:'#9B82FF'},
+  'Neon Arcade':   {bg:'#06040B', surface:'#0D0917', surface_raised:'#150F22', surface_hover:'#221733', border:'#33244C', text:'#EDE4FF', text_strong:'#FFFFFF', text_muted:'#A18CCC', accent:'#FF2E88'},
+  'Slate':         {bg:'#171A1D', surface:'#1E2226', surface_raised:'#262B30', surface_hover:'#333940', border:'#434A52', text:'#DDE2E7', text_strong:'#FFFFFF', text_muted:'#9BA5AF', accent:'#58A0DE'},
+  'Ink & Gold':    {bg:'#0B0B0C', surface:'#131315', surface_raised:'#1B1B1E', surface_hover:'#26262A', border:'#38383E', text:'#E8E4DA', text_strong:'#FFFFFF', text_muted:'#A29D90', accent:'#D4AF37'},
+  'Crimson Keep':  {bg:'#140609', surface:'#1E0A0F', surface_raised:'#290E15', surface_hover:'#3A151F', border:'#4F1D2A', text:'#F0DDE1', text_strong:'#FFFFFF', text_muted:'#BD9099', accent:'#E8505F'},
+  'Sunset Drive':  {bg:'#16091F', surface:'#1F0D2B', surface_raised:'#2A1239', surface_hover:'#3A1A4E', border:'#4E2467', text:'#F2E2F7', text_strong:'#FFFFFF', text_muted:'#B392C7', accent:'#FF6B9D'},
+  'Grape':         {bg:'#120A1C', surface:'#1B1029', surface_raised:'#241738', surface_hover:'#33224E', border:'#453066', text:'#EADFF7', text_strong:'#FFFFFF', text_muted:'#A38DC4', accent:'#B368F0'},
+  'Forest Floor':  {bg:'#0E1410', surface:'#141C16', surface_raised:'#1B251D', surface_hover:'#26332A', border:'#35473A', text:'#DFE9E0', text_strong:'#FFFFFF', text_muted:'#93A897', accent:'#7FBF5F'},
+  'Copper Oxide':  {bg:'#08201F', surface:'#0C2A29', surface_raised:'#113634', surface_hover:'#184642', border:'#1F5B55', text:'#DCF2EE', text_strong:'#FFFFFF', text_muted:'#87B9B2', accent:'#3FD1BA'},
+  'Solar Flare':   {bg:'#14100C', surface:'#1C1711', surface_raised:'#251E16', surface_hover:'#352A1D', border:'#4A3A26', text:'#F0E6D8', text_strong:'#FFFFFF', text_muted:'#AE9C84', accent:'#FF8C1A'},
+  'Amber CRT':     {bg:'#0A0703', surface:'#120C05', surface_raised:'#1A1208', surface_hover:'#281B0C', border:'#3D2A11', text:'#FFB000', text_strong:'#FFD466', text_muted:'#C78A08', accent:'#FFB000'},
+  'Matrix':        {bg:'#000000', surface:'#04140A', surface_raised:'#072011', surface_hover:'#0C3019', border:'#134D28', text:'#8FE8AC', text_strong:'#D6FFE4', text_muted:'#4E9A67', accent:'#28E060'},
+  'Game Boy':      {bg:'#0F2010', surface:'#16301A', surface_raised:'#1B3A1D', surface_hover:'#234A26', border:'#3A6E34', text:'#9BBC0F', text_strong:'#D0EC58', text_muted:'#7A9C10', accent:'#9BBC0F'},
+  'Paper':         {bg:'#F4F1EA', surface:'#FFFFFF', surface_raised:'#FBF9F4', surface_hover:'#EDE7DA', border:'#D3CBBA', text:'#2A2620', text_strong:'#14110C', text_muted:'#6B6353', accent:'#B4553C'},
+  'Arctic':        {bg:'#EEF4F9', surface:'#FFFFFF', surface_raised:'#F7FAFD', surface_hover:'#DDE9F3', border:'#C2D4E3', text:'#18303F', text_strong:'#0A1C27', text_muted:'#55707F', accent:'#0E7FA8'}
+};
+
+/* ---------------------------------------------------------------------------
+   State
+   --------------------------------------------------------------------------- */
+const blankAsset = () => ({name:'', dataUrl:'', type:'', size:0, w:0, h:0, decoded:false});
+const state = {
+  meta:   {name:'', author:'', folder:''},
+  colors: {},                    /* role -> '#RRGGBB[AA]'; absent = CyberFoil's own */
+  bg:     Object.assign(blankAsset(), {mode:'builtin', dim:0}),
+  banner: Object.assign(blankAsset(), {mode:'builtin'}),
+  bannerFont: {name:'', dataUrl:''},
+  images: {},                    /* slot key -> asset */
+  oled:   false,
+  screen: 'main',
+  report: null                   /* what the last RomM conversion could not carry */
+};
+/* Derived files the editor makes for you; never persisted. */
+const derived = {bake: null, bakeKey: '', banner: null, bannerKey: ''};
+
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+
+/* ---------------------------------------------------------------------------
+   Folder names. The folder is the theme's identity in config.json's themeFile
+   ("<folder>/theme.json"), so it has to pass ValidManifestPath, and it lives
+   on a FAT32 or exFAT card, which refuses a few more characters still.
+   --------------------------------------------------------------------------- */
+const FAT_BAD = /[<>:"\/\\|?*\x00-\x1F]/;
+function safeFolder(n){
+  let out = String(n || '').replace(/[<>:"\/\\|?*\x00-\x1F]/g, '_').replace(/^[. ]+/, '').replace(/[. ]+$/, '');
+  return out || 'My Theme';
+}
+const folderName = () => safeFolder(state.meta.folder || state.meta.name);
+
+/* ---------------------------------------------------------------------------
+   Asset bytes
+   --------------------------------------------------------------------------- */
+function dataUrlToBytes(url){
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function dataUrlSize(url){
+  const b64 = url.slice(url.indexOf(',') + 1);
+  const pad = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+  return Math.floor(b64.length * 3 / 4) - pad;
+}
+const dataUrlType = url => (/^data:([^;,]+)/.exec(url) || [])[1] || '';
+
+/** Decode once, the way IMG_Load would: dimensions, or "does not decode". */
+function decodeImage(url){
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res({w: img.naturalWidth, h: img.naturalHeight, img});
+    img.onerror = () => res(null);
+    img.src = url;
+  });
+}
+async function assetFromDataUrl(name, url){
+  const a = blankAsset();
+  a.name = name; a.dataUrl = url; a.type = dataUrlType(url); a.size = dataUrlSize(url);
+  const d = await decodeImage(url);
+  if (d){ a.w = d.w; a.h = d.h; }
+  a.decoded = !!d;
+  return a;
+}
+
+/* ===========================================================================
+   The pack: theme.json plus the files beside it, exactly as they will sit in
+   sdmc:/switch/CyberFoil/theme/<folder>/. The checks and the preview both run
+   CyberFoil's loader over THIS, so what you see is what the console would
+   make of the bytes you are about to download - not of the editor's state.
+   =========================================================================== */
+const extFor = type => IMAGE_TYPES[type] || 'png';
+
+function buildPack(){
+  const doc = {version: 1, enabled: true, name: state.meta.name || folderName()};
+  if (state.meta.author) doc.author = state.meta.author;
+
+  const colors = {};
+  for (const k of ROLE_KEYS) if (state.colors[k]) colors[k] = state.colors[k];
+  if (Object.keys(colors).length) doc.colors = colors;
+
+  const files = [];
+  const images = {};
+  const put = (key, path, a) => {
+    images[key] = path;
+    files.push({path, dataUrl: a.dataUrl, size: a.size, image: a.decoded ? {w: a.w, h: a.h} : null, type: a.type});
+  };
+
+  if (state.bg.mode === 'none') images.background = '';
+  else if (state.bg.mode === 'image' && state.bg.dataUrl){
+    const baked = state.bg.dim > 0 && derived.bakeKey === bakeKey() ? derived.bake : null;
+    const a = baked || state.bg;
+    put('background', 'background.' + extFor(a.type), a);
+  }
+
+  if (state.banner.mode === 'image' && state.banner.dataUrl) put('logo', 'banner.' + extFor(state.banner.type), state.banner);
+  else if (state.banner.mode === 'generate' && derived.banner && derived.bannerKey === bannerKey()) put('logo', 'banner.png', derived.banner);
+
+  for (const s of SLOTS){
+    const a = state.images[s.k];
+    if (a && a.dataUrl) put(s.k, SLOT_FILE(s.k) + '.' + extFor(a.type), a);
+  }
+  if (Object.keys(images).length) doc.images = images;
+  return {doc, files, text: JSON.stringify(doc, null, 2) + '\n'};
+}
+
+/** The pack as CyberFoil's file system sees it, plus where each file's bytes are. */
+function packVfs(pack){
+  const dir = 'theme/' + folderName();
+  const vfs = new Map(), urls = new Map();
+  vfs.set(dir + '/theme.json', {size: cfBytes(pack.text).length, text: pack.text});
+  for (const f of pack.files){
+    vfs.set(dir + '/' + f.path, {size: f.size, image: f.image});
+    urls.set(dir + '/' + f.path, f.dataUrl);
+  }
+  return {vfs, urls, selected: folderName() + '/theme.json'};
+}
+
+/* A theme state from the colours alone - for drawing the generated banner,
+   which has to know the palette before the pack that contains it exists. */
+function colorsOnlyState(){
+  const st = {colors: new Map(), images: new Map(), name: '', noBg: false, ignored: []};
+  for (const [k, v] of Object.entries(state.colors)){ const c = cfParseColor(v); if (c) st.colors.set(k, c); }
+  return st;
+}
+
+/* ---------------------------------------------------------------------------
+   Derived images: the darkened background and the generated banner.
+   Both are real files in the pack, so both are made the way they will ship -
+   on a canvas, encoded, measured - rather than faked with CSS in the preview.
+   --------------------------------------------------------------------------- */
+const bakeKey = () => state.bg.dataUrl.length + ':' + state.bg.dataUrl.slice(-64) + '|' + state.bg.dim;
+async function refreshBake(){
+  const key = bakeKey();
+  if (state.bg.mode !== 'image' || !state.bg.dataUrl || !(state.bg.dim > 0)){ derived.bake = null; derived.bakeKey = ''; return; }
+  if (derived.bakeKey === key) return;
+  const d = await decodeImage(state.bg.dataUrl);
+  if (!d || key !== bakeKey()) return;
+  const cv = document.createElement('canvas');
+  cv.width = d.w; cv.height = d.h;
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(d.img, 0, 0);
+  /* c' = c * (1 - dim): black at alpha `dim` over the image is exactly that. */
+  ctx.fillStyle = `rgba(0,0,0,${state.bg.dim})`;
+  ctx.fillRect(0, 0, d.w, d.h);
+  const type = state.bg.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+  const url = cv.toDataURL(type, 0.92);
+  derived.bake = await assetFromDataUrl('background', url);
+  derived.bakeKey = key;
+  render();
+}
+
+let bannerFontFace = null, bannerFontUrl = '';
+const bannerKey = () => [state.meta.name || folderName(), state.bannerFont.dataUrl.length, state.colors.text || '',
+                         state.colors.accent || '', state.colors.selected_text || ''].join('|');
+async function refreshBanner(){
+  if (state.banner.mode !== 'generate'){ derived.banner = null; derived.bannerKey = ''; return; }
+  const key = bannerKey();
+  if (derived.bannerKey === key) return;
+  let family = 'sans-serif';
+  if (state.bannerFont.dataUrl){
+    if (bannerFontUrl !== state.bannerFont.dataUrl){
+      try {
+        bannerFontFace = new FontFace('CFBanner', `url(${state.bannerFont.dataUrl})`);
+        await bannerFontFace.load();
+        document.fonts.add(bannerFontFace);
+        bannerFontUrl = state.bannerFont.dataUrl;
+      } catch (e){ bannerFontFace = null; bannerFontUrl = ''; }
+    }
+    if (bannerFontFace) family = '"CFBanner", sans-serif';
+  }
+  if (key !== bannerKey()) return;
+  const st = colorsOnlyState();
+  const cv = document.createElement('canvas');
+  cv.width = 480; cv.height = 93;
+  const ctx = cv.getContext('2d');
+  const title = state.meta.name || folderName();
+  /* The banner is drawn at y = -8 under a 74px header, so rows 8..82 are what
+     shows. The name sits in that band, left-aligned where CyberFoil's own
+     wordmark does, with an accent tick like the queue's. */
+  let size = 46;
+  ctx.textBaseline = 'middle';
+  for (; size > 18; size -= 2){
+    ctx.font = `700 ${size}px ${family}`;
+    if (ctx.measureText(title).width <= 480 - 40) break;
+  }
+  ctx.fillStyle = cssRgba(cfPalette(st, '#FF4D4DFF'));
+  ctx.beginPath(); ctx.roundRect(14, 27, 5, 36, 2); ctx.fill();
+  ctx.fillStyle = cssRgba(cfPalette(st, '#FFFFFFFF'));
+  ctx.fillText(title, 30, 46);
+  derived.banner = await assetFromDataUrl('banner', cv.toDataURL('image/png'));
+  derived.bannerKey = key;
+  render();
+}
+
+/* ===========================================================================
+   The preview: CyberFoil's screens, drawn from its source.
+
+   Every rectangle, label and image below is one from CyberFoil's page
+   constructors (mainPage.cpp, sdInstPage.cpp, instPage.cpp), at its position
+   and size, in its draw order, and coloured by the same call the source makes
+   - cfColor(role, cfPalette(literal)) - against the state cfLoad produced from
+   the pack. Plutonium's Menu and ProgressBar are ported for the list and the
+   bar. What is approximate is the typeface (the console's shared font is not
+   ours to ship) and CyberFoil's own artwork, which is loaded from its
+   repository at CF_SOURCE when the browser can reach it and drawn as a
+   placeholder when it cannot.
+   =========================================================================== */
+const imgCache = new Map();
+function imageFor(url){
+  if (!url) return null;
+  let e = imgCache.get(url);
+  if (!e){
+    e = {img: new Image(), ok: false, done: false};
+    /* raw.githubusercontent sends CORS headers; asking for them keeps the
+       canvas readable, which the checks and the tests depend on. */
+    if (/^https?:/.test(url)) e.img.crossOrigin = 'anonymous';
+    e.img.onload = () => { e.ok = true; e.done = true; drawPreview(); };
+    e.img.onerror = () => { e.done = true; drawPreview(); };
+    e.img.src = url;
+    imgCache.set(url, e);
+  }
+  return e;
+}
+
+let view = null;   /* {st, urls, oled} - what drawPreview paints */
+
+/** A romfs image as this theme resolves it: the theme's file or CyberFoil's own. */
+function assetUrl(key){
+  const p = cfAsset(view.st, CF_IMAGE_PREFIX + key);
+  if (p.startsWith(CF_IMAGE_PREFIX)) return {url: CF_RAW + key, own: false};
+  return {url: view.urls.get(p) || '', own: true};
+}
+
+const GLYPHS = {'':'Ⓐ', '':'Ⓑ', '':'Ⓧ', '':'Ⓨ', '':'⊕'};
+const glyphs = s => s.replace(/[-]/g, ch => GLYPHS[ch] || '');
+const FONT = '"Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+function drawPreview(){
+  const cv = $('screen');
+  if (!cv || !view) return;
+  const ctx = cv.getContext('2d');
+  const {st, oled} = view;
+  const P = hex => cfPalette(st, hex);
+  const C = (role, fb) => cfColor(st, role, fb);
+
+  const rect = (x, y, w, h, c, r) => {
+    if (!c.a || w <= 0 || h <= 0) return;
+    ctx.fillStyle = cssRgba(c);
+    if (r){ ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); }
+    else ctx.fillRect(x, y, w, h);
+  };
+  /* Plutonium's TextBlock is positioned by the top of its texture. */
+  const text = (s, x, y, size, c, opt) => {
+    ctx.font = `${opt && opt.bold ? '600 ' : ''}${size}px ${FONT}`;
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = cssRgba(c);
+    const str = glyphs(s);
+    let tx = x;
+    if (opt && opt.right) tx = x - ctx.measureText(str).width;
+    if (opt && opt.center) tx = x + (opt.width - ctx.measureText(str).width) / 2;
+    ctx.fillText(str, tx, y + Math.round(size * 0.08));
+    return ctx.measureText(str).width;
+  };
+  const textW = (s, size) => { ctx.font = `${size}px ${FONT}`; return ctx.measureText(glyphs(s)).width; };
+  /* An Image element at its own size unless w/h are given, as Plutonium's is. */
+  const image = (key, x, y, w, h, label) => {
+    const a = assetUrl(key);
+    const e = imageFor(a.url);
+    if (e && e.ok){
+      ctx.drawImage(e.img, x, y, w || e.img.naturalWidth, h || e.img.naturalHeight);
+      return;
+    }
+    if (!w || !h) return;          /* an own-size image we cannot see has no box to stand in for */
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.setLineDash([5, 4]); ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    if (label){
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.font = `${Math.max(10, Math.min(16, h / 4))}px ${FONT}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, x + w / 2, y + h / 2);
+    }
+    ctx.restore();
+  };
+
+  /* ---- ApplyBackground ---- */
+  ctx.clearRect(0, 0, 1280, 720);
+  const bg = cfApplyBackground(st, oled, false);
+  rect(0, 0, 1280, 720, withAlpha(bg.color, 255));
+  if (bg.image){
+    const url = bg.image.startsWith(CF_IMAGE_PREFIX) ? CF_RAW + 'background.jpg' : view.urls.get(bg.image);
+    const e = imageFor(url);
+    if (e && e.ok) ctx.drawImage(e.img, 0, 0);   /* RenderTexture at 0,0: own size, never scaled */
+  }
+
+  const scr = state.screen;
+  if (scr === 'main') image('awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png', 410, 190);
+
+  /* ---- the frame every page builds ---- */
+  rect(0, 0, 1280, 74, C('header', P(oled ? '#000000FF' : '#170909FF')));
+  if (scr !== 'main') rect(0, 75, 1280, 60, C('panel', P(oled ? '#000000FF' : '#17090980')));
+  rect(0, 660, 1280, 60, C('footer', P(oled ? '#000000FF' : '#17090980')));
+  image('logo.png', 0, -8, 480, 93, 'CyberFoil banner');
+  text('v' + CF_APP_VERSION, 480, 29, 22, P('#FFFFFFFF'));
+
+  /* Status cluster, laid out as MainApplication.cpp's applyStatus does. */
+  const timeW = textW('12:34', 22), right = 1270, timeX = right - timeW;
+  text('12:34', timeX, 24, 22, P('#FFFFFFFF'));
+  const iconsW = 6 + 6 + 16 + 6 + 24 + 3, iconY = 50;
+  const ix = Math.max(0, timeX + Math.trunc((timeW - iconsW) / 2));
+  rect(ix, iconY + 2, 6, 6, P('#4CD964FF'), 3);
+  [4, 7, 10].forEach((h, i) => rect(ix + 12 + i * 6, iconY + 10 - h, 4, h, i < 2 ? P('#FFFFFFFF') : P('#FFFFFF55')));
+  const bx = ix + 12 + 16 + 6;
+  rect(bx, iconY, 24, 12, P('#FFFFFF66'));
+  rect(bx + 1, iconY + 1, 16, 10, P('#4CD964FF'));
+  rect(bx + 25, iconY + 3, 3, 6, P('#FFFFFF66'));
+  const sdX = timeX - 12 - 180, sysX = sdX - 12 - 180;
+  [[sysX, 'System Memory', 'Free 18.4 GB', 0.42], [sdX, 'microSD Card', 'Free 211 GB', 0.63]].forEach(([x, l, f, p]) => {
+    text(l, x, 24, 16, P('#FFFFFFFF'));
+    rect(x, 42, 180, 6, P('#FFFFFF33'));
+    rect(x, 42, Math.round(180 * p), 6, P('#FF4D4DFF'));
+    text(f, x, 52, 16, P('#FFFFFFFF'));
+  });
+  text('IP: 192.168.1.42', sysX - 12, 24, 16, P('#FFFFFFFF'), {right: true});
+
+  if (scr === 'main') drawMain(ctx, P, C, rect, text, image);
+  else if (scr === 'browser') drawBrowser(ctx, st, P, C, rect, text, image);
+  else if (scr === 'queue') drawQueue(P, rect, text, image);
+  else drawInstall(P, rect, text, image);
+}
+
+const GRID = ['Install from Remote', 'Install from SD card', 'Install from USB SSD/HDD',
+              'Install over MTP', 'Install from NS-USBloader', 'Install over LAN or internet',
+              'Backup Save Data', 'Settings', 'Exit'];
+const GRID_ICONS = ['remote', 'micro-sd', 'usb-install', 'usb-port', 'usb-port', 'cloud-download',
+                    'save-data-cloud', 'settings', 'exit-run'];
+
+function drawMain(ctx, P, C, rect, text, image){
+  const oled = view.oled;
+  text(' Select     Exit     Info', 10, 678, 20, P('#FFFFFFFF'));
+  const tile = C('panel', P(oled ? '#1A1A1ACC' : '#170909CC'));
+  const hi = C('highlight', P(oled ? '#FF4D4D66' : '#FF4D4D88'));
+  const sel = 1;
+  const pos = i => ({x: 80 + (i % 3) * 380, y: 100 + Math.trunc(i / 3) * 188});
+  for (let i = 0; i < 9; i++){ const p = pos(i); rect(p.x, p.y, 360, 170, tile, 18); }
+  /* "Selection fills the tile behind its contents, even with opaque theme colors." */
+  const s = pos(sel);
+  rect(s.x - 4, s.y - 4, 368, 178, hi, 20);
+  for (let i = 0; i < 9; i++){ const p = pos(i); image(`icons/${GRID_ICONS[i]}.png`, p.x + 132, p.y + 22, 96, 96, GRID_ICONS[i]); }
+  for (let i = 0; i < 9; i++){
+    const p = pos(i);
+    const c = i === sel ? C('selected_text', P('#FFFFFFFF')) : P('#FFFFFFFF');
+    text(GRID[i], p.x + 18, p.y + 116 + 1, 22, c, {center: true, width: 324});
+  }
+}
+
+/** Plutonium's elm::Menu::OnRender, for the rows a page shows. */
+function drawMenu(ctx, st, rect, text, image, m){
+  const {x, y, w, isize, ishow, items, isel, clr, fcs, scb, fontSize} = m;
+  let cy = y;
+  const shown = Math.min(ishow, items.length);
+  for (let i = 0; i < shown; i++){
+    rect(x, cy, w, isize, i === isel ? fcs : clr);
+    const it = items[i];
+    const icw0 = isize - 10;
+    const iconX = x + 25;
+    image(it.icon, iconX, cy + 5, icw0, icw0, '');
+    /* theme::Menu::OnRender recolours only the focused item, and only when the
+       theme sets selected_text. */
+    const col = (i === isel && st.colors.has('selected_text')) ? cfColor(st, 'selected_text', it.color) : it.color;
+    text(it.label, iconX + icw0 + 25, cy + Math.trunc((isize - fontSize * 1.25) / 2), fontSize, col);
+    cy += isize;
+  }
+  if (ishow < items.length){
+    const sclr = {r: Math.max(0, scb.r - 30), g: Math.max(0, scb.g - 30), b: Math.max(0, scb.b - 30), a: scb.a};
+    const scx = x + (w - 20), sch = ishow * isize;
+    rect(scx, y, 20, sch, scb);
+    const fch = Math.trunc((ishow * sch) / items.length);
+    rect(scx, y, 20, fch, sclr);
+  }
+}
+
+function drawBrowser(ctx, st, P, C, rect, text, image){
+  const oled = view.oled;
+  text('Select what files you want to install, then press the Plus button!', 10, 89, 30, P('#FFFFFFFF'));
+  text(' Select File     Select All     Install File(s)     Help     Cancel', 10, 678, 20, P('#FFFFFFFF'));
+  const white = P('#FFFFFFFF');
+  const items = [{label: '..', icon: 'icons/folder-upload.png'},
+                 {label: 'Homebrew', icon: 'icons/folder.png'},
+                 {label: 'Updates', icon: 'icons/folder.png'}];
+  ['Celeste [01002B30028F6000][v0].nsp', 'Hades [0100535012974000][v0].nsp', 'Hollow Knight [0100633007D48000][v0].nsz',
+   'Into the Breach [0100F0000869C000][v0].nsp', 'Katana ZERO [010073E008E6E000][v0].xci', 'Spiritfarer [0100BD400DC52000][v0].nsp',
+   'Tetris Effect Connected [0100B8E016F76000][v0].nsz', 'Untitled Goose Game [010082400BCC6000][v0].nsp',
+   'Wargroove [01000F8008826000][v0].nsp', 'Wandersong [0100D67013910000][v0].nsp']
+    .forEach((n, i) => items.push({label: n, icon: i === 1 || i === 3 ? 'icons/check-box-outline.png' : 'icons/checkbox-blank-outline.png'}));
+  items.forEach(it => it.color = white);
+  drawMenu(ctx, st, rect, text, image, {
+    x: 0, y: 136, w: 1280, isize: 50, ishow: 10, items, isel: 4, fontSize: 25,
+    clr: P('#FFFFFF00'),
+    fcs: C('highlight', P(oled ? '#FFFFFF33' : '#00000033')),
+    scb: C('scrollbar', P(oled ? '#FFFFFF66' : '#17090980'))
+  });
+}
+
+function drawQueue(P, rect, text, image){
+  text('Installing 1 of 5 items', 10, 89, 30, P('#FFFFFFFF'));
+  text(' Back', 1270, 678, 20, P('#FFFFFFFF'), {right: true});
+  rect(24, 152, 480, 486, P('#17171CF5'), 14);
+  rect(524, 152, 732, 486, P('#17171CF5'), 14);
+  rect(48, 176, 4, 18, P('#FF4D4DFF'), 2);
+  text('NOW INSTALLING', 64, 173, 18, P('#FF7777FF'), {bold: true});
+  text('Hollow Knight', 48, 216, 24, P('#FFFFFFFF'));
+  text('42%', 264, 326, 52, P('#FFFFFFFF'), {bold: true});
+  text('CONTENT PROGRESS', 264, 391, 14, P('#A8A8B8FF'));
+  text('UP NEXT', 548, 171, 26, P('#FFFFFFFF'), {bold: true});
+  text('Page 1/1', 1232, 177, 18, P('#A8A8B8FF'), {right: true});
+  const rows = [['Celeste', 'Base game · 1.2 GB'], ['Hades', 'Base game · 9.8 GB'], ['Into the Breach', 'Update v196608 · 210 MB'],
+                ['Spiritfarer', 'Base game · 7.4 GB']];
+  for (let i = 0; i < 6; i++){
+    const y = 220 + i * 62;
+    if (i >= rows.length) continue;
+    rect(540, y, 700, 56, P('#222228FF'), 8);
+    text(String(i + 2), 552, y + 18, 16, P('#A8A8B8FF'));
+    image('icons/title-placeholder.png', 600, y + 6, 44, 44, '');
+    text(rows[i][0], 660, y + 5, 21, P('#FFFFFFFF'));
+    text(rows[i][1], 660, y + 32, 14, P('#A8A8B8FF'));
+    text('Queued', 1132, y + 20, 14, P('#FF9999FF'));
+  }
+  text('4 queued · 18.6 GB', 548, 609, 16, P('#A8A8B8FF'));
+}
+
+function drawInstall(P, rect, text, image){
+  text('Installing Hollow Knight', 10, 89, 30, P('#FFFFFFFF'));
+  text('Installing NCA 2 of 3 - 412 MB of 980 MB', 15, 568, 22, P('#FFFFFFFF'));
+  /* Plutonium's ProgressBar::OnRender: rounded at h/3, fill never narrower than h. */
+  const w = 850, h = 40, pcw = Math.trunc(0.42 * w);
+  rect(10, 600, w, h, P('#222222FF'), Math.trunc(h / 3));
+  rect(10, 600, Math.max(h, pcw), h, P('#FF4D4DFF'), Math.trunc(h / 3));
+  image('awoos/7d8a05cddfef6da4901b20d2698d5a71.png', 510, 166);
+}
+
+/* ===========================================================================
+   Checks: CyberFoil's own verdict on the pack, then readability.
+   =========================================================================== */
+let bgSample = {url: '', peak: null};
+function sampleBg(url){
+  if (bgSample.url === url) return bgSample.peak;
+  bgSample = {url, peak: null};
+  decodeImage(url).then(d => {
+    if (!d || bgSample.url !== url) return;
+    try {
+      const W = 64, H = 36, B = 4;
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const c = cv.getContext('2d', {willReadFrequently: true});
+      /* Only the part the screen shows: the image is drawn at its own size. */
+      const sw = Math.min(d.w, 1280), sh = Math.min(d.h, 720);
+      c.drawImage(d.img, 0, 0, sw, sh, 0, 0, Math.round(W * sw / 1280), Math.round(H * sh / 720));
+      const px = c.getImageData(0, 0, W, H).data;
+      let best = -1;
+      for (let by = 0; by + B <= H; by += B) for (let bx = 0; bx + B <= W; bx += B){
+        let r = 0, g = 0, b = 0;
+        for (let y = by; y < by + B; y++) for (let x = bx; x < bx + B; x++){
+          const i = (y * W + x) * 4; r += px[i]; g += px[i+1]; b += px[i+2];
+        }
+        const p = {r: Math.round(r/16), g: Math.round(g/16), b: Math.round(b/16), a: 255};
+        const l = luminance(p);
+        if (l > best){ best = l; bgSample.peak = p; }
+      }
+      renderChecks();
+    } catch (e) { /* the readability check is the only casualty */ }
+  });
+  return null;
+}
+
+let lastPack = null, lastVfs = null;
+function renderChecks(){
+  if (!lastPack || !view) return;
+  const out = [];
+  const add = (kind, html) => out.push({kind, html});
+  const {st, oled} = view;
+  const sel = lastVfs.selected;
+  const P = hex => cfPalette(st, hex);
+  const C = (role, fb) => cfColor(st, role, fb);
+
+  /* ---- 1. Will the picker list it? ---- */
+  const listed = cfDiscover(lastVfs.vfs).find(c => c.file === sel);
+  if (!cfValidManifestPath(sel)){
+    add('err', `The folder name <code>${esc(folderName())}</code> makes <code>${esc(sel)}</code>, which CyberFoil refuses as a theme path.`);
+  } else if (!listed){
+    add('err', 'CyberFoil would leave this theme out of its picker.');
+  } else {
+    add('ok', `Listed in <b>Settings &rarr; System &rarr; Theme</b> as <b>${esc(listed.name)}</b>, saved in config.json as ` +
+              `<code>themeFile: "${esc(sel)}"</code>.`);
+  }
+  if (!state.meta.name) add('warn', 'No name set, so the folder name is used for it.');
+  else if (cfBytes(state.meta.name).length > 80){
+    add('warn', `The name is ${cfBytes(state.meta.name).length} bytes and CyberFoil allows 80, so the picker would show ` +
+                `<b>theme</b> - the file's stem - instead.`);
+  }
+  if (FAT_BAD.test(state.meta.folder || '')) add('warn', `The folder name has characters an SD card cannot hold; it is saved as <code>${esc(folderName())}</code>.`);
+
+  /* ---- 2. What survived the loader ---- */
+  const roles = ROLE_KEYS.filter(k => st.colors.has(k));
+  add('info', roles.length
+    ? `${roles.length} of 11 roles set. The rest keep CyberFoil's own value${!st.colors.has('highlight') || !st.colors.has('scrollbar') ? ', and an unset highlight or scrollbar follows accent' : ''}.`
+    : 'No colours set - this is CyberFoil\'s built-in look.');
+  for (const ig of st.ignored){
+    add('warn', ig.kind === 'color'
+      ? `<code>colors.${esc(ig.key)}</code> is not a colour CyberFoil can read and is ignored.`
+      : `<code>images["${esc(ig.key)}"]</code> is ignored by CyberFoil.`);
+  }
+  for (const f of lastPack.files){
+    const full = 'theme/' + folderName() + '/' + f.path;
+    if (![...st.images.values()].includes(full)){
+      const why = !f.image ? 'does not decode'
+                : f.size > CF_IMAGE_MAX_BYTES ? `is ${(f.size / 1048576).toFixed(1)} MB and the limit is 16 MiB`
+                : (f.image.w > CF_IMAGE_MAX_SIDE || f.image.h > CF_IMAGE_MAX_SIDE) ? `is ${f.image.w}×${f.image.h}, over the 4096 px limit`
+                : 'is refused';
+      add('err', `<code>${esc(f.path)}</code> ${why}, so CyberFoil keeps the built-in image.`);
+    }
+    if (f.type && !IMAGE_TYPES[f.type]) add('warn', `<code>${esc(f.path)}</code> is ${esc(f.type)}. CyberFoil's decoder is documented for PNG, JPEG and WebP.`);
+  }
+
+  const bgImg = lastPack.files.find(f => f.path.startsWith('background.'));
+  if (bgImg && bgImg.image && (bgImg.image.w !== 1280 || bgImg.image.h !== 720)){
+    add('warn', `The background is ${bgImg.image.w}×${bgImg.image.h}. CyberFoil draws it at its own size from the top-left, ` +
+                `so ${bgImg.image.w < 1280 || bgImg.image.h < 720 ? 'part of the screen shows the bare background colour' : 'everything past 1280×720 is cut off'}.`);
+  }
+  if (state.bg.mode === 'image' && state.bg.dim > 0 && !derived.bake) add('info', 'Darkening the background&hellip;');
+  const logo = lastPack.files.find(f => f.path.startsWith('banner.'));
+  if (logo && logo.image && Math.abs(logo.image.w / logo.image.h - 480 / 93) > 0.08){
+    add('warn', `The banner is ${logo.image.w}×${logo.image.h}; it is stretched to 480×93.`);
+  }
+  const ticks = ['icons/checkbox-blank-outline.png', 'icons/check-box-outline.png'].map(k => st.images.has(k));
+  if (ticks[0] !== ticks[1]) add('warn', 'Only one of the two checkbox images is replaced. CyberFoil\'s README asks for both.');
+  if (state.bg.mode === 'builtin' && !st.colors.has('background')){
+    add('info', 'The wallpaper is left to CyberFoil, so a <code>background.png</code> in <code>sdmc:/switch/CyberFoil/</code> ' +
+                'shows instead of the built-in one, as it always has. OLED mode shows neither.');
+  }
+
+  /* ---- 3. Readability, on the colours CyberFoil will actually composite ---- */
+  const bgc = cfApplyBackground(st, oled, false);
+  let backdrop = withAlpha(bgc.color, 255);
+  let imgNote = '';
+  if (bgc.image && !bgc.image.startsWith(CF_IMAGE_PREFIX)){
+    const peak = sampleBg(lastVfs.urls.get(bgc.image));
+    if (peak){ backdrop = peak; imgNote = ' over the brightest part of the background'; }
+  } else if (bgc.image) imgNote = ' (over the built-in wallpaper, which is dark red)';
+  const header = over(C('header', P(oled ? '#000000FF' : '#170909FF')), backdrop);
+  const info = over(C('panel', P(oled ? '#000000FF' : '#17090980')), backdrop);
+  const tile = over(C('panel', P(oled ? '#1A1A1ACC' : '#170909CC')), backdrop);
+  const tileHi = over(C('highlight', P(oled ? '#FF4D4D66' : '#FF4D4D88')), tile);
+  const rowHi = over(C('highlight', P(oled ? '#FFFFFF33' : '#00000033')), backdrop);
+  const card = over(P('#17171CF5'), backdrop);
+  const qrow = over(P('#222228FF'), card);
+  const txt = P('#FFFFFFFF'), selTxt = C('selected_text', txt);
+  const pairs = [
+    ['Header text', txt, header, 4.5],
+    ['Menu tile labels', txt, tile, 4.5],
+    ['The focused tile\'s label', selTxt, tileHi, 4.5],
+    ['The focused file row', st.colors.has('selected_text') ? selTxt : txt, rowHi, 4.5],
+    ['The info bar', txt, info, 4.5],
+    ['Muted queue text', over(P('#A8A8B8FF'), qrow), qrow, 3],
+    ['Progress fill against its track', over(P('#FF4D4DFF'), backdrop), over(P('#222222FF'), backdrop), 1.5]
+  ];
+  let weak = 0;
+  for (const [what, fg, bgcol, need] of pairs){
+    const r = contrast(over(fg, bgcol), bgcol);
+    if (r < need){
+      weak++;
+      add(r < need * 0.66 ? 'err' : 'warn', `${what}: ${r.toFixed(2)}:1${imgNote}, below ${need}:1.`);
+    }
+  }
+  if (!weak) add('ok', `Every text pair clears its contrast bar${imgNote}${oled ? ', in OLED mode' : ''}.`);
+
+  const host = $('findings');
+  host.innerHTML = out.map(f => `<li><span class="tag ${f.kind}">${f.kind === 'err' ? 'error' : f.kind}</span><span>${f.html}</span></li>`).join('');
+  const errs = out.filter(f => f.kind === 'err').length, warns = out.filter(f => f.kind === 'warn').length;
+  $('checkSummary').textContent = errs ? `${errs} error${errs === 1 ? '' : 's'}` : warns ? `${warns} warning${warns === 1 ? '' : 's'}` : 'all clear';
+}
+
+/* ===========================================================================
+   Controls
+   =========================================================================== */
+function buildColorList(){
+  const host = $('colorList');
+  host.textContent = '';
+  for (const role of ROLES){
+    const row = document.createElement('div');
+    row.className = 'crow';
+    row.dataset.role = role.k;
+    row.innerHTML =
+      `<span class="swatch" title="Pick a colour"><i></i><input type="color" aria-label="${role.k} colour"></span>` +
+      `<div class="rname">${role.k}<small>${esc(role.t)}</small></div>` +
+      `<input class="hex" type="text" spellcheck="false" aria-label="${role.k} hex">` +
+      `<input class="alpha" type="range" min="0" max="255" step="1" aria-label="${role.k} opacity">` +
+      `<button class="reset" title="Unset - back to CyberFoil's own">&#8634;</button>`;
+    const picker = row.querySelector('input[type=color]');
+    const hex = row.querySelector('input.hex');
+    const alpha = row.querySelector('input.alpha');
+    const setRole = c => { state.colors[role.k] = toHex(c); render({skip: role.k}); };
+    picker.addEventListener('input', () => {
+      const cur = parseHex(state.colors[role.k] || '') || {a: 255};
+      const p = parseHex(picker.value);
+      setRole(withAlpha(p, cur.a));
+    });
+    hex.addEventListener('input', () => {
+      const v = hex.value.trim();
+      if (!v){ delete state.colors[role.k]; hex.classList.remove('bad'); render({skip: role.k}); return; }
+      const p = parseHex(v);
+      hex.classList.toggle('bad', !p);
+      if (p) setRole(p);
+    });
+    hex.addEventListener('blur', () => syncColorInputs());
+    alpha.addEventListener('input', () => {
+      const p = parseHex(state.colors[role.k] || '');
+      if (p) setRole(withAlpha(p, parseInt(alpha.value, 10)));
+    });
+    row.querySelector('.reset').addEventListener('click', () => { delete state.colors[role.k]; render(); });
+    host.appendChild(row);
+  }
+}
+
+function syncColorInputs(skip){
+  const st = view ? view.st : colorsOnlyState();
+  for (const role of ROLES){
+    const row = document.querySelector(`.crow[data-role="${role.k}"]`);
+    const set = state.colors[role.k];
+    const shown = set ? parseHex(set) : role.fb(st, state.oled);
+    row.classList.toggle('set', !!set);
+    row.querySelector('.swatch i').style.background = cssRgba(shown);
+    row.querySelector('input[type=color]').value = '#' + h2(shown.r) + h2(shown.g) + h2(shown.b);
+    const hex = row.querySelector('input.hex');
+    hex.placeholder = toHex(shown);
+    if (skip !== role.k){ hex.value = set || ''; hex.classList.remove('bad'); }
+    const alpha = row.querySelector('input.alpha');
+    alpha.disabled = !set;
+    alpha.value = shown.a;
+    alpha.style.background = `linear-gradient(90deg, transparent, rgb(${shown.r},${shown.g},${shown.b})), ` +
+                             'repeating-conic-gradient(#555 0% 25%, #999 0% 50%) 0 0/8px 8px';
+    row.querySelector('.reset').disabled = !set;
+  }
+  const n = ROLE_KEYS.filter(k => state.colors[k]).length;
+  $('setCount').textContent = n ? `${n} of 11 set` : 'built-in look';
+}
+
+function buildSlotList(){
+  const host = $('slotList');
+  host.textContent = '';
+  let group = null, grid = null;
+  for (const s of SLOTS){
+    if (s.g !== group){
+      group = s.g;
+      const gl = document.createElement('div'); gl.className = 'group-label'; gl.textContent = group;
+      grid = document.createElement('div'); grid.className = 'slots';
+      host.append(gl, grid);
+    }
+    const el = document.createElement('div');
+    el.className = 'slot';
+    el.dataset.slot = s.k;
+    el.innerHTML = `<div class="thumb"></div><div class="sm"><b>${esc(s.l)}</b><span>${esc(s.size)}</span></div>` +
+                   `<label class="filebtn">Pick<input type="file" accept="image/png,image/jpeg,image/webp"></label>` +
+                   `<button class="ghost" title="Back to CyberFoil's own">&times;</button>`;
+    el.querySelector('input').addEventListener('change', async ev => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (!f) return;
+      state.images[s.k] = await assetFromDataUrl(f.name, await readFileAsDataUrl(f));
+      render();
+    });
+    el.querySelector('button').addEventListener('click', () => { delete state.images[s.k]; render(); });
+    grid.appendChild(el);
+  }
+}
+
+function renderSlots(){
+  let n = 0;
+  for (const s of SLOTS){
+    const el = document.querySelector(`.slot[data-slot="${CSS.escape(s.k)}"]`);
+    const a = state.images[s.k];
+    const thumb = el.querySelector('.thumb');
+    const src = a && a.dataUrl ? a.dataUrl : CF_RAW + s.k;
+    if (thumb.dataset.src !== src){
+      thumb.dataset.src = src;
+      thumb.innerHTML = '';
+      const img = document.createElement('img');
+      img.alt = '';
+      img.onerror = () => { thumb.textContent = 'none'; };
+      img.src = src;
+      thumb.appendChild(img);
+    }
+    el.classList.toggle('set', !!(a && a.dataUrl));
+    el.querySelector('.sm span').textContent = a && a.dataUrl
+      ? (a.decoded ? `${a.w}×${a.h} · ${(a.size / 1024).toFixed(0)} KB` : 'does not decode')
+      : s.size;
+    el.querySelector('button').disabled = !(a && a.dataUrl);
+    if (a && a.dataUrl) n++;
+  }
+  $('iconCount').textContent = n ? `${n} replaced` : '';
+}
+
+function pushStateToInputs(){
+  $('mName').value = state.meta.name;
+  $('mAuthor').value = state.meta.author;
+  $('mFolder').value = state.meta.folder;
+  $('bgMode').value = state.bg.mode;
+  $('bgDim').value = state.bg.dim;
+  $('bnMode').value = state.banner.mode;
+  $('oled').checked = state.oled;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x.dataset.screen === state.screen));
+}
+
+function renderAssetLabels(){
+  const label = (a) => !a.name ? 'none'
+    : !a.dataUrl ? `${a.name} (named, file not loaded)`
+    : `${a.name} · ${a.decoded ? `${a.w}×${a.h}` : 'does not decode'}`;
+  $('bgName').textContent = label(state.bg);
+  $('bnName').textContent = label(state.banner);
+  $('bnFontName').textContent = state.bannerFont.name || 'system font';
+  $('bgDimVal').textContent = Number(state.bg.dim).toFixed(2);
+  $('bgImageBox').hidden = state.bg.mode !== 'image';
+  $('bnImageBox').hidden = state.banner.mode !== 'image';
+  $('bnGenBox').hidden = state.banner.mode !== 'generate';
+  $('folderHint').innerHTML = `Installs to <code>sdmc:/switch/CyberFoil/theme/${esc(folderName())}/theme.json</code>`;
+}
+
+function renderReport(){
+  const r = state.report, el = $('report');
+  if (!r){ el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<b>Converted from the RomM theme "${esc(r.from)}".</b> ` +
+    'CyberFoil has no slot for these, so they stay behind:' +
+    `<ul>${r.dropped.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` +
+    '<button class="ghost" id="reportClose" style="margin-top:8px;">Dismiss</button>';
+  $('reportClose').addEventListener('click', () => { state.report = null; render(); });
+}
+
+function render(opts){
+  lastPack = buildPack();
+  lastVfs = packVfs(lastPack);
+  view = {st: cfLoad(lastVfs.vfs, lastVfs.selected), urls: lastVfs.urls, oled: state.oled};
+  syncColorInputs(opts && opts.skip);
+  renderAssetLabels();
+  renderSlots();
+  renderReport();
+  drawPreview();
+  renderChecks();
+  $('jsonOut').value = lastPack.text;
+  $('legend').textContent = view.st.name === 'Default'
+    ? 'CyberFoil would not load this pack - the preview shows its built-in look.'
+    : 'Drawn from CyberFoil\'s own layout code at 1280×720. The typeface is an approximation; the colours, positions and draw order are not.';
+  save();
+  refreshBake();
+  refreshBanner();
+}
+
+/* ===========================================================================
+   Export
+   =========================================================================== */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++){
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes){
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function dosDateTime(d){
+  const time = ((d.getHours() & 31) << 11) | ((d.getMinutes() & 63) << 5) | ((d.getSeconds() / 2) & 31);
+  const date = (((d.getFullYear() - 1980) & 127) << 9) | (((d.getMonth() + 1) & 15) << 5) | (d.getDate() & 31);
+  return {time, date};
+}
+/* Store-only, like the RomM editor's: the images are already compressed. */
+function makeZip(entries){
+  const enc = new TextEncoder();
+  const {time, date} = dosDateTime(new Date());
+  const locals = [], centrals = [];
+  let offset = 0;
+  entries.forEach(e => {
+    const nameBytes = enc.encode(e.path);
+    const data = e.bytes, crc = crc32(data);
+    const lh = new Uint8Array(30 + nameBytes.length), lv = new DataView(lh.buffer);
+    lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0x0800, true);
+    lv.setUint16(8, 0, true); lv.setUint16(10, time, true); lv.setUint16(12, date, true);
+    lv.setUint32(14, crc, true); lv.setUint32(18, data.length, true); lv.setUint32(22, data.length, true);
+    lv.setUint16(26, nameBytes.length, true); lv.setUint16(28, 0, true); lh.set(nameBytes, 30);
+    const cd = new Uint8Array(46 + nameBytes.length), cv = new DataView(cd.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true); cv.setUint16(10, 0, true); cv.setUint16(12, time, true);
+    cv.setUint16(14, date, true); cv.setUint32(16, crc, true); cv.setUint32(20, data.length, true);
+    cv.setUint32(24, data.length, true); cv.setUint16(28, nameBytes.length, true);
+    cv.setUint32(42, offset, true); cd.set(nameBytes, 46);
+    locals.push(lh, data); centrals.push(cd);
+    offset += lh.length + data.length;
+  });
+  const centralSize = centrals.reduce((n, c) => n + c.length, 0);
+  const eocd = new Uint8Array(22), ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, entries.length, true); ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, centralSize, true); ev.setUint32(16, offset, true);
+  return new Blob([...locals, ...centrals, eocd], {type: 'application/zip'});
+}
+function download(blob, filename){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+/* A pack can be downloaded while the darkened background or the generated
+   banner is still being made; wait for them so the zip is never the stale one. */
+async function settled(){
+  await refreshBake();
+  await refreshBanner();
+  render();
+}
+
+async function exportPack(){
+  await settled();
+  const dir = folderName() + '/';
+  const entries = [{path: dir + 'theme.json', bytes: new TextEncoder().encode(lastPack.text)}];
+  for (const f of lastPack.files) entries.push({path: dir + f.path, bytes: dataUrlToBytes(f.dataUrl)});
+  download(makeZip(entries), folderName() + '.zip');
+}
+
+async function exportJson(){
+  await settled();
+  if (lastPack.files.length &&
+      !confirm(`This theme uses ${lastPack.files.length} image${lastPack.files.length === 1 ? '' : 's'}, which a lone theme.json ` +
+               'cannot carry - CyberFoil would fall back to its own for each. Download the pack instead for a theme that works as shown.\n\n' +
+               'Download theme.json anyway?')) return;
+  /* No images: the JSON can go straight into theme/ under the folder's name. */
+  const name = lastPack.files.length ? 'theme.json' : folderName() + '.json';
+  download(new Blob([lastPack.text], {type: 'application/json'}), name);
+}
+
+/* ===========================================================================
+   Import
+   =========================================================================== */
+function readFileAsDataUrl(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result));
+    fr.onerror = () => rej(new Error('could not read ' + file.name));
+    fr.readAsDataURL(file);
+  });
+}
+function readFileAsText(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result));
+    fr.onerror = () => rej(new Error('could not read ' + file.name));
+    fr.readAsText(file);
+  });
+}
+function splitPath(path){
+  const norm = String(path).replace(/\\/g, '/');
+  const cut = norm.lastIndexOf('/');
+  return {dir: cut < 0 ? '' : norm.slice(0, cut), base: cut < 0 ? norm : norm.slice(cut + 1)};
+}
+
+/**
+ * Which format is this? A RomM theme.json names `bg` or `surface`, carries a
+ * top-level `background`, `font`, `audio` or `effects`, or a version string;
+ * a CyberFoil one has none of those. Asked once, on import, so the two cannot
+ * be confused downstream.
+ */
+function looksLikeRomm(doc){
+  const c = doc.colors && typeof doc.colors === 'object' ? doc.colors : {};
+  if ('bg' in c || 'surface' in c || 'surface_raised' in c || 'text_strong' in c) return true;
+  if (doc.background !== undefined || doc.effects !== undefined || doc.audio !== undefined || doc.font !== undefined) return true;
+  /* CyberFoil's version is the number 1 or absent; RomM's is always a string. */
+  return typeof doc.version === 'string';
+}
+
+/** Find a file the theme names, beside its theme.json first, then anywhere. */
+function findInBundle(bundle, homeDir, rel){
+  const want = (homeDir ? homeDir + '/' : '') + rel.replace(/^\.\//, '');
+  const exact = bundle.find(f => (f.dir ? f.dir + '/' : '') + f.base === want);
+  if (exact) return exact;
+  const base = splitPath(rel).base.toLowerCase();
+  const hits = bundle.filter(f => f.base.toLowerCase() === base);
+  return hits.find(f => f.dir === homeDir) || hits[0] || null;
+}
+
+function resetState(){
+  state.meta = {name:'', author:'', folder:''};
+  state.colors = {};
+  state.bg = Object.assign(blankAsset(), {mode:'builtin', dim:0});
+  state.banner = Object.assign(blankAsset(), {mode:'builtin'});
+  state.bannerFont = {name:'', dataUrl:''};
+  state.images = {};
+  state.report = null;
+}
+
+/** A CyberFoil theme.json, and the files that came with it. */
+async function importCyberFoil(doc, fetchFile){
+  const missing = [], ignored = [];
+  resetState();
+  state.meta.name = typeof doc.name === 'string' ? doc.name : '';
+  state.meta.author = typeof doc.author === 'string' ? doc.author : '';
+  if (doc.colors && typeof doc.colors === 'object'){
+    for (const [k, v] of Object.entries(doc.colors)){
+      const c = cfParseColor(v) || parseHex(v);
+      if (!ROLE_KEYS.includes(k)) { ignored.push(`colors.${k} (not a CyberFoil role)`); continue; }
+      if (!c) { ignored.push(`colors.${k} (not a colour)`); continue; }
+      if (!cfParseColor(v)) ignored.push(`colors.${k}: ${JSON.stringify(v)} would be ignored by CyberFoil - rewritten as ${toHex(c)}`);
+      state.colors[k] = toHex(c);
+    }
+  }
+  const images = doc.images && typeof doc.images === 'object' ? doc.images : {};
+  for (const [k0, v] of Object.entries(images)){
+    const key = k0 === 'background' ? 'background.jpg' : k0 === 'logo' ? 'logo.png' : k0;
+    if (typeof v !== 'string') continue;
+    if (key === 'background.jpg' && v === ''){ state.bg.mode = 'none'; continue; }
+    const target = key === 'background.jpg' ? 'bg' : key === 'logo.png' ? 'banner' : SLOTS.some(s => s.k === key) ? key : null;
+    if (!target){ ignored.push(`images["${k0}"] (not an image CyberFoil uses)`); continue; }
+    const url = await fetchFile(v);
+    if (!url){ missing.push(v); continue; }
+    const a = await assetFromDataUrl(splitPath(v).base, url);
+    if (target === 'bg'){ Object.assign(state.bg, a, {mode: 'image', dim: 0}); }
+    else if (target === 'banner'){ Object.assign(state.banner, a, {mode: 'image'}); }
+    else state.images[target] = a;
+  }
+  return {missing, ignored};
+}
+
+/**
+ * A RomM theme, converted. `fetchFile(name)` returns a data URL or null.
+ * The RomM background is darkened by its own `dim` - CyberFoil cannot do it
+ * at draw time, so the pixels have to carry it - and its font, which
+ * CyberFoil cannot load, still gets used: it draws the banner.
+ */
+async function importRomm(doc, fetchFile, label){
+  resetState();
+  state.meta.name = typeof doc.name === 'string' ? doc.name : '';
+  state.meta.author = typeof doc.author === 'string' ? doc.author : '';
+  state.colors = rommColors(doc.colors || {});
+  const dropped = [], missing = [];
+
+  const bg = typeof doc.background === 'string' ? {image: doc.background} : (doc.background && typeof doc.background === 'object' ? doc.background : {});
+  if (typeof bg.image === 'string' && bg.image){
+    const url = await fetchFile(bg.image);
+    if (url){
+      Object.assign(state.bg, await assetFromDataUrl(bg.image, url), {mode: 'image'});
+      state.bg.dim = typeof bg.dim === 'number' ? Math.min(0.9, Math.max(0, bg.dim)) : 0;
+    } else { missing.push(bg.image); state.bg.mode = 'none'; }
+  } else state.bg.mode = 'none';   /* RomM shows its bg colour; so should CyberFoil */
+  /* Motion with no image moves nothing in RomM either, so it is not a loss. */
+  const still = state.bg.mode === 'image' ? ' - the still image is used' : '';
+  if (still && bg.motion && bg.motion.kind && bg.motion.kind !== 'none') dropped.push(`background motion (${bg.motion.kind})${still}`);
+  if (bg.animation && bg.animation.kind) dropped.push(`the ${bg.animation.kind} animation${still}`);
+
+  const fx = doc.effects && doc.effects.focus;
+  if (fx && fx.kind && fx.kind !== 'none') dropped.push(`the ${fx.kind} focus effect`);
+
+  const fontName = typeof doc.font === 'string' ? doc.font : (doc.font && typeof doc.font.file === 'string' ? doc.font.file : '');
+  if (fontName){
+    const url = await fetchFile(fontName);
+    if (url){ state.bannerFont = {name: fontName, dataUrl: url}; dropped.push(`the font (${fontName}) - CyberFoil keeps its own; it draws the banner instead`); }
+    else { missing.push(fontName); dropped.push(`the font (${fontName})`); }
+  }
+  state.banner.mode = 'generate';
+
+  const mascot = doc.assets && typeof doc.assets.mascot === 'string' ? doc.assets.mascot : '';
+  if (mascot){
+    const url = await fetchFile(mascot);
+    if (url) state.images['awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png'] = await assetFromDataUrl(mascot, url);
+    else missing.push(mascot);
+  }
+  const bgm = doc.audio && doc.audio.bgm;
+  if (typeof bgm === 'string' && bgm && bgm !== 'none' && bgm !== 'off') dropped.push(`the music (${bgm})`);
+  const c = doc.colors || {};
+  const unused = ['text_disabled', 'text_on_accent', 'accent_hover', 'accent_alt', 'focus_ring', 'success', 'warning', 'danger', 'info', 'scrim']
+    .filter(k => k in c);
+  if (unused.length) dropped.push(`${unused.length} colour roles CyberFoil has no place for: ${unused.join(', ')}`);
+  if (missing.length) dropped.push(`files that could not be read: ${missing.join(', ')}`);
+  state.report = {from: label || state.meta.name || 'RomM theme', dropped};
+}
+
+async function importBundle(bundle, folderGuess){
+  const themeFiles = bundle.filter(f => /\.json$/i.test(f.base));
+  if (!themeFiles.length){ alert('No theme JSON in that selection.'); return; }
+  /* theme.json first, shallowest first - a root-level CyberFoil .json too. */
+  themeFiles.sort((a, b) => (b.base.toLowerCase() === 'theme.json') - (a.base.toLowerCase() === 'theme.json') ||
+                            a.dir.split('/').length - b.dir.split('/').length);
+  const entry = themeFiles[0];
+  let doc;
+  try {
+    let text = await entry.text();
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    doc = JSON.parse(text);
+  } catch (e){ alert('That file is not valid JSON:\n\n' + e.message); return; }
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)){ alert('A theme file must be a JSON object.'); return; }
+
+  const fetchFile = async rel => {
+    const f = findInBundle(bundle, entry.dir, rel);
+    if (!f) return null;
+    try { return await f.dataUrl(); } catch (e) { return null; }
+  };
+  const folder = folderGuess || (entry.dir ? splitPath(entry.dir).base : entry.base.replace(/\.json$/i, ''));
+  if (looksLikeRomm(doc)){
+    await importRomm(doc, fetchFile, doc.name || folder);
+  } else {
+    const res = await importCyberFoil(doc, fetchFile);
+    const notes = [];
+    if (res.ignored.length) notes.push('Not carried over:\n  ' + res.ignored.join('\n  '));
+    if (res.missing.length) notes.push('Named by the theme but not in what you picked:\n  ' + res.missing.join('\n  '));
+    if (notes.length) setTimeout(() => alert('Theme imported.\n\n' + notes.join('\n\n')), 0);
+  }
+  state.meta.folder = safeFolder(folder);
+  pushStateToInputs();
+  render();
+}
+
+function bundleFromFiles(files){
+  return files.map(f => {
+    const {dir, base} = splitPath(f.webkitRelativePath || f.name);
+    return {dir, base, text: () => readFileAsText(f), dataUrl: () => readFileAsDataUrl(f)};
+  });
+}
+
+/* ---- reading a .zip, deflated or stored (as in the RomM editor) ---------- */
+async function inflateRaw(bytes){
+  if (typeof DecompressionStream !== 'function') throw new Error('this browser cannot decompress zip entries');
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+function readZip(buffer){
+  const dv = new DataView(buffer), bytes = new Uint8Array(buffer);
+  let eocd = -1;
+  const floor = Math.max(0, bytes.length - 22 - 0xFFFF);
+  for (let i = bytes.length - 22; i >= floor; i--) if (dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  if (eocd < 0) throw new Error('not a zip file (no end-of-archive record)');
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const dec = new TextDecoder('utf-8'), out = [];
+  for (let i = 0; i < count; i++){
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('damaged zip directory');
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true), extraLen = dv.getUint16(p + 30, true), cmtLen = dv.getUint16(p + 32, true);
+    const local = dv.getUint32(p + 42, true);
+    const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + extraLen + cmtLen;
+    if (name.endsWith('/')) continue;
+    const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+    out.push({name, method, data: bytes.subarray(start, start + csize)});
+  }
+  return out;
+}
+const MIME = {png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp', gif:'image/gif', bmp:'image/bmp',
+              ttf:'font/ttf', otf:'font/otf'};
+function mimeFor(name){
+  const dot = name.lastIndexOf('.');
+  return MIME[dot > 0 ? name.slice(dot + 1).toLowerCase() : ''] || 'application/octet-stream';
+}
+function bytesToDataUrl(bytes, type){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result));
+    fr.onerror = () => rej(new Error('could not read'));
+    fr.readAsDataURL(new Blob([bytes], {type}));
+  });
+}
+async function bundleFromZip(file){
+  return readZip(await file.arrayBuffer()).map(e => {
+    const {dir, base} = splitPath(e.name);
+    const raw = async () => {
+      if (e.method === 0) return e.data;
+      if (e.method === 8) return await inflateRaw(e.data);
+      throw new Error('unsupported compression in ' + e.name);
+    };
+    return {dir, base,
+            text: async () => new TextDecoder('utf-8').decode(await raw()),
+            dataUrl: async () => bytesToDataUrl(await raw(), mimeFor(base))};
+  });
+}
+
+async function importPicked(files){
+  if (!files.length) return;
+  try {
+    if (files.length === 1 && /\.zip$/i.test(files[0].name)){
+      await importBundle(await bundleFromZip(files[0]), files[0].name.replace(/\.zip$/i, ''));
+      return;
+    }
+    let guess = '';
+    const rel = files[0].webkitRelativePath;
+    if (rel) guess = rel.replace(/\\/g, '/').split('/')[0] || '';
+    await importBundle(bundleFromFiles(files), guess);
+  } catch (e){
+    alert('Could not import that:\n\n' + e.message);
+  }
+}
+
+/* ===========================================================================
+   The RomM catalog, opened as CyberFoil themes.
+
+   The same manifest.json the RomM client and the RomM editor read, and the
+   same URL encoding (theme_catalog.cpp's url_encode_segment), so a theme that
+   opens there opens here.
+   =========================================================================== */
+const CATALOG_BASE = 'https://raw.githubusercontent.com/A-Theme/RomM-Themes/main/';
+function encodeSeg(seg){
+  let out = '';
+  for (const b of new TextEncoder().encode(seg)){
+    const ch = String.fromCharCode(b);
+    out += /[A-Za-z0-9\-_.~]/.test(ch) ? ch : '%' + b.toString(16).toUpperCase().padStart(2, '0');
+  }
+  return out;
+}
+const themeFileUrl = (folder, file) => CATALOG_BASE + 'themes/' + encodeSeg(folder) + '/' + encodeSeg(file);
+const catalogPathUrl = p => (!p || p.startsWith('/') || p.includes('..')) ? '' : CATALOG_BASE + p.split('/').map(encodeSeg).join('/');
+
+async function fetchText(url){
+  const r = await fetch(url, {cache: 'no-cache'});
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + url);
+  return r.text();
+}
+async function fetchDataUrl(url, name){
+  const r = await fetch(url, {cache: 'no-cache'});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return bytesToDataUrl(await r.arrayBuffer(), mimeFor(name));
+}
+
+let catalogRows = null;
+function catalogMessage(html){ $('catBody').innerHTML = '<div class="cat-msg">' + html + '</div>'; }
+function openCatalog(){
+  $('catBack').hidden = false;
+  $('catSearch').value = '';
+  if (catalogRows){ renderCatalog(); $('catSearch').focus(); return; }
+  loadCatalog();
+}
+const closeCatalog = () => { $('catBack').hidden = true; };
+
+async function loadCatalog(){
+  catalogMessage('Fetching the catalog&hellip;');
+  try {
+    const doc = JSON.parse(await fetchText(CATALOG_BASE + 'manifest.json'));
+    if (!doc || !Array.isArray(doc.themes)) throw new Error('manifest has no "themes" array');
+    catalogRows = doc.themes.filter(t => t && typeof t.folder === 'string' && t.folder && !FAT_BAD.test(t.folder)).map(t => ({
+      folder: t.folder,
+      name: typeof t.name === 'string' && t.name ? t.name : t.folder,
+      author: typeof t.author === 'string' ? t.author : '',
+      thumb: typeof t.thumb === 'string' ? t.thumb : '',
+      bits: [t.has_background && 'background', t.has_font && 'font → banner', t.has_mascot && 'mascot',
+             t.animated && 'animated (still used)', t.has_music && 'music (dropped)'].filter(Boolean)
+    }));
+    renderCatalog();
+    $('catSearch').focus();
+  } catch (e){
+    catalogRows = null;
+    catalogMessage('<b>Could not reach the catalog.</b><br>' + esc(e.message) +
+      '<br><br>Everything else works offline. You can also download a theme folder from ' +
+      '<code>github.com/A-Theme/RomM-Themes</code> and use <b>Import folder</b>; a RomM theme is converted either way.');
+  }
+}
+
+function renderCatalog(){
+  const host = $('catBody');
+  const q = $('catSearch').value.trim().toLowerCase();
+  const rows = catalogRows.filter(e => !q || e.name.toLowerCase().includes(q) || e.author.toLowerCase().includes(q));
+  host.textContent = '';
+  if (!rows.length){ catalogMessage(q ? 'Nothing matches <b>' + esc(q) + '</b>.' : 'The catalog is empty.'); return; }
+  for (const e of rows){
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.innerHTML = `<div class="cat-sw">${e.thumb ? `<img loading="lazy" alt="" src="${esc(catalogPathUrl(e.thumb))}">` : ''}</div>` +
+      `<div class="cat-meta"><b>${esc(e.name)}</b><div class="who">${e.author ? 'by ' + esc(e.author) : 'unknown author'}</div>` +
+      `<div class="sum">${esc(['colours', ...e.bits].join(' · '))}</div></div>`;
+    const btn = document.createElement('button');
+    btn.className = 'primary';
+    btn.textContent = 'Convert';
+    btn.addEventListener('click', () => useCatalogTheme(e, row, btn));
+    row.appendChild(btn);
+    host.appendChild(row);
+  }
+}
+
+async function useCatalogTheme(entry, row, btn){
+  row.classList.add('busy');
+  btn.disabled = true;
+  btn.textContent = 'Converting…';
+  try {
+    const doc = JSON.parse(await fetchText(themeFileUrl(entry.folder, 'theme.json')));
+    await importRomm(doc, async name => {
+      try { return await fetchDataUrl(themeFileUrl(entry.folder, name), name); } catch (e) { return null; }
+    }, entry.name);
+    state.meta.folder = entry.folder;   /* keep the RomM folder name: one theme, one name, both apps */
+    if (!state.meta.name) state.meta.name = entry.name;
+    pushStateToInputs();
+    render();
+    closeCatalog();
+  } catch (e){
+    alert(`Could not convert "${entry.name}":\n\n${e.message}`);
+  } finally {
+    row.classList.remove('busy');
+    btn.disabled = false;
+    btn.textContent = 'Convert';
+  }
+}
+
+/* ===========================================================================
+   Persistence - names and colours, never the bytes (see the RomM editor for
+   why: a few MB of base64 per keystroke against a 5 MB quota).
+   =========================================================================== */
+const LS_KEY = 'cyberfoil-theme-editor-v1';
+function save(){
+  try {
+    const slim = {meta: state.meta, colors: state.colors, oled: state.oled, screen: state.screen,
+                  bg: {mode: state.bg.mode === 'image' ? 'builtin' : state.bg.mode, dim: state.bg.dim},
+                  banner: {mode: state.banner.mode === 'image' ? 'builtin' : state.banner.mode}};
+    localStorage.setItem(LS_KEY, JSON.stringify(slim));
+  } catch (e) {}
+}
+function load(){
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if (!s) return;
+    if (s.meta) Object.assign(state.meta, s.meta);
+    if (s.colors && typeof s.colors === 'object'){
+      for (const [k, v] of Object.entries(s.colors)) if (ROLE_KEYS.includes(k) && cfParseColor(v)) state.colors[k] = v;
+    }
+    if (s.bg && ['builtin', 'none'].includes(s.bg.mode)) state.bg.mode = s.bg.mode;
+    if (s.bg && typeof s.bg.dim === 'number') state.bg.dim = s.bg.dim;
+    if (s.banner && ['builtin', 'generate'].includes(s.banner.mode)) state.banner.mode = s.banner.mode;
+    state.oled = s.oled === true;
+    if (['main', 'browser', 'queue', 'install'].includes(s.screen)) state.screen = s.screen;
+  } catch (e) {}
+}
+
+/* ===========================================================================
+   Wiring
+   =========================================================================== */
+function wireImage(inputId, clearId, target, mode){
+  $(inputId).addEventListener('change', async ev => {
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!f) return;
+    const a = await assetFromDataUrl(f.name, await readFileAsDataUrl(f));
+    Object.assign(state[target], a, {mode});
+    render();
+  });
+  $(clearId).addEventListener('click', () => {
+    Object.assign(state[target], blankAsset());
+    render();
+  });
+}
+
+function init(){
+  buildColorList();
+  buildSlotList();
+  const presets = $('presetSel');
+  const o0 = document.createElement('option'); o0.value = '__builtin'; o0.textContent = 'CyberFoil (built-in)';
+  presets.appendChild(o0);
+  Object.keys(ROMM_PRESETS).forEach(name => {
+    const o = document.createElement('option'); o.value = name; o.textContent = name;
+    presets.appendChild(o);
+  });
+
+  load();
+  pushStateToInputs();
+
+  [['mName', 'name'], ['mAuthor', 'author'], ['mFolder', 'folder']].forEach(([id, k]) =>
+    $(id).addEventListener('input', () => { state.meta[k] = $(id).value; render(); }));
+
+  $('btnPreset').addEventListener('click', () => {
+    const name = presets.value;
+    if (!name) return;
+    state.colors = name === '__builtin' ? {} : rommColors(ROMM_PRESETS[name]);
+    render();
+  });
+  $('btnDefault').addEventListener('click', () => {
+    if (!confirm('Start over from CyberFoil\'s built-in look? Colours, images and details are all cleared.')) return;
+    resetState();
+    pushStateToInputs();
+    render();
+  });
+
+  $('bgMode').addEventListener('change', () => { state.bg.mode = $('bgMode').value; render(); });
+  $('bgDim').addEventListener('input', () => { state.bg.dim = parseFloat($('bgDim').value); render(); });
+  wireImage('bgFile', 'bgClear', 'bg', 'image');
+  $('bnMode').addEventListener('change', () => { state.banner.mode = $('bnMode').value; render(); });
+  wireImage('bnFile', 'bnClear', 'banner', 'image');
+  $('bnFont').addEventListener('change', async ev => {
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!f) return;
+    state.bannerFont = {name: f.name, dataUrl: await readFileAsDataUrl(f)};
+    render();
+  });
+  $('bnFontClear').addEventListener('click', () => { state.bannerFont = {name: '', dataUrl: ''}; render(); });
+
+  $('oled').addEventListener('change', () => { state.oled = $('oled').checked; render(); });
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+    state.screen = b.dataset.screen;
+    pushStateToInputs();
+    render();
+  }));
+
+  $('btnCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('jsonOut').value); $('copyNote').textContent = 'Copied.'; }
+    catch (e){ $('jsonOut').select(); $('copyNote').textContent = 'Selected - press Ctrl/Cmd+C.'; }
+    setTimeout(() => { $('copyNote').textContent = ''; }, 2500);
+  });
+  $('btnJson').addEventListener('click', exportJson);
+  $('btnPack').addEventListener('click', exportPack);
+
+  $('btnCatalog').addEventListener('click', openCatalog);
+  $('catClose').addEventListener('click', closeCatalog);
+  $('catReload').addEventListener('click', () => { catalogRows = null; loadCatalog(); });
+  $('catSearch').addEventListener('input', () => { if (catalogRows) renderCatalog(); });
+  $('catBack').addEventListener('mousedown', ev => { if (ev.target === $('catBack')) closeCatalog(); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('catBack').hidden) closeCatalog(); });
+
+  ['importFile', 'importDir'].forEach(id => $(id).addEventListener('change', ev => {
+    const files = Array.from(ev.target.files || []);   /* input.files is live - copy before resetting */
+    ev.target.value = '';
+    importPicked(files);
+  }));
+
+  render();
+
+  if ('serviceWorker' in navigator && location.protocol !== 'file:'){
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -27,19 +27,20 @@
 
 ## 🧾 What is this?
 
-**Aramaki's Theme Editors** — two self-contained web apps in one repo, for
-theming two different Switch apps. No hand-editing raw JSON and guessing what a
+**Aramaki's Theme Editors** — three self-contained web apps in one repo, for
+theming three different Switch apps. No hand-editing raw JSON and guessing what a
 colour or path field does: load a theme, tweak every field through a proper UI,
 preview it live, export it back out.
 
 | editor | themes | file | |
 |---|---|---|---|
 | **[RomM Theme Editor](romm-theme-editor.html)** | the RomM Switch client, an SDL2 homebrew app | `theme.json` | **where the work is** |
+| **[CyberFoil Theme Editor](cyberfoil-theme-editor.html)** | [CyberFoil](https://github.com/luketanti/CyberFoil), the Switch installer | `theme.json` | **new** — and converts RomM themes |
 | **[Tinfoil Theme Editor](tinfoil-theme-editor.html)** | [Tinfoil](https://github.com/Huntereb/Tinfoil), the Switch shop app | `settings.json` | maintained |
 
-[`index.html`](index.html) is a launcher offering both — it is what the desktop
+[`index.html`](index.html) is a launcher offering all three — it is what the desktop
 app opens. Each editor also carries its **own** web manifest, so they install as
-two separate apps and can sit side by side on a home screen.
+separate apps and can sit side by side on a home screen.
 
 The RomM one was built alongside [RomM-Themes](https://github.com/A-Theme/RomM-Themes),
 the Tinfoil one alongside the [A-Theme Tinfoil theme collection](https://github.com/A-Theme/Tinfoil-Themes).
@@ -132,6 +133,64 @@ Drop the unzipped folder into `sdmc:/switch/romm-client/themes/` and pick it in
 submission against the same rules the client enforces.
 
 ---
+
+## 🟣 The CyberFoil Theme Editor
+
+[`cyberfoil-theme-editor.html`](cyberfoil-theme-editor.html) themes
+**[CyberFoil](https://github.com/luketanti/CyberFoil)**, which gained external
+themes in 1.5.0. It installs as its own app
+([`manifest-cyberfoil.json`](manifest-cyberfoil.json)).
+
+CyberFoil's format is smaller than the RomM client's, and the editor is built
+around what it can and cannot do:
+
+| | CyberFoil | the RomM client |
+|---|---|---|
+| **Colour roles** | 11 — `background`, `header`, `footer`, `panel`, `text`, `selected_text`, `muted_text`, `accent`, `highlight`, `scrollbar`, `progress_track` | 19 |
+| **Colours** | `#RRGGBB` or `#RRGGBBAA` only | also `#RGB`, `#RGBA`, no `#` |
+| **Background** | one still image, drawn at its own size; no `dim` | image, `dim`, motion, animation |
+| **Images** | the banner, 17 icons and two mascots, each by its path in CyberFoil's `romfs/images/` | the mascot |
+| **Font, music, focus effects** | none | all three |
+| **`version`** | must be the **number** `1` | a version string |
+
+That last row is why **a RomM theme copied into CyberFoil's theme folder does
+not appear at all**: CyberFoil leaves any theme whose `version` is not the number
+1 out of its picker, and every RomM theme says something like `"1.2.0"`. Copied
+across as they are, CyberFoil lists none of the 160 in RomM-Themes. Converted
+here, it lists all 160.
+
+What the editor does for you:
+
+- **Convert any RomM theme.** *Convert a RomM theme* lists the published
+  catalog; importing a RomM folder or pack converts it the same way. The 19 roles
+  are mapped onto CyberFoil's 11, keeping the pairs that decide legibility
+  together, so every focused label in the catalog clears 4.5:1 after conversion.
+  The background is darkened by the theme's own `dim`, in the pixels, since
+  CyberFoil cannot do it at draw time. The theme's font, which CyberFoil cannot
+  load, draws a banner with the theme's name in it instead. What cannot come
+  across — motion, animation, focus effects, music, the unused roles — is listed
+  rather than dropped silently.
+- **A checker that is CyberFoil's own code.** Whether the picker lists your theme,
+  what it calls it, which colours parse and which images survive all come from
+  a port of CyberFoil's `source/util/theme.cpp`, run over the exact bytes you are
+  about to download. [`tests/check-cyberfoil.mjs`](tests/check-cyberfoil.mjs) holds
+  the port to the C++: CyberFoil's own `theme.cpp` is compiled on the host
+  against small stubs and its decisions for 5186 cases — byte-length names,
+  a BOM, `"version": 1.0`, a 4097-pixel image, an alpha multiplied by a
+  default's — must match line for line.
+- **Live preview of the real screens** — main menu, SD card file list, install
+  queue and install progress, laid out from CyberFoil's page constructors and
+  coloured by the same calls the source makes. CyberFoil recolours most of its UI
+  by matching hard-coded hex literals (`#FF4D4D` is accent everywhere), and the
+  preview runs that same mapping, so an unset role shows what it really falls
+  back to. An OLED-mode toggle shows the other set of defaults. CyberFoil's own
+  artwork is loaded from its repository when you are online; it is GPL and not
+  part of this editor.
+- **Readability checks on what CyberFoil composites**: the focused tile's label
+  on the highlight on the tile on the background's brightest patch, not two hex
+  values side by side.
+- **Export** a drop-in folder for `sdmc:/switch/CyberFoil/theme/`, or a single
+  `.json` when the theme has no images.
 
 ---
 

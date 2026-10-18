@@ -1,0 +1,550 @@
+{
+ "tree": {
+  "theme/full/theme.json": {
+   "json": {
+    "version": 1,
+    "enabled": true,
+    "name": "Full Coverage",
+    "colors": {
+     "background": "#101827",
+     "header": "#0B1220FF",
+     "footer": "#0B1220E6",
+     "panel": "#1A2740FF",
+     "text": "#EAF2FFFF",
+     "selected_text": "#FFFFFFFF",
+     "muted_text": "#9DB2C9FF",
+     "accent": "#56A8FFFF",
+     "highlight": "#245F9DCC",
+     "scrollbar": "#56A8FF80",
+     "progress_track": "#22354DFF"
+    },
+    "images": {
+     "background": "bg.png",
+     "logo": "banner.png",
+     "icons/settings.png": "icons/settings.png",
+     "icons/folder.png": "./folder.png",
+     "icons/remote.png": "sub/../remote.png",
+     "icons/micro-sd.png": "C:sd.png",
+     "icons/usb-port.png": "a\\b.png",
+     "icons/exit-run.png": "/abs.png",
+     "icons/wrench.png": "missing.png",
+     "icons/cloud-download.png": "corrupt.png",
+     "icons/usb-install.png": "wide.png",
+     "icons/folder-upload.png": "edge.png",
+     "icons/save-data-cloud.png": "heavy.png",
+     "icons/title-placeholder.png": "empty.png",
+     "awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png": "mascot.png",
+     "icons/check-box-outline.png": "",
+     "icons/remote-connection-waiting.png": "icons/",
+     "icons/lan-connection-waiting.png": 7,
+     "not-a-real-slot.png": "bg.png"
+    }
+   }
+  },
+  "theme/full/bg.png": {
+   "png": [
+    1280,
+    720
+   ]
+  },
+  "theme/full/banner.png": {
+   "png": [
+    480,
+    93
+   ]
+  },
+  "theme/full/icons/settings.png": {
+   "png": [
+    120,
+    120
+   ]
+  },
+  "theme/full/folder.png": {
+   "png": [
+    64,
+    64
+   ]
+  },
+  "theme/full/remote.png": {
+   "png": [
+    120,
+    120
+   ]
+  },
+  "theme/full/corrupt.png": {
+   "bytes": 200
+  },
+  "theme/full/wide.png": {
+   "png": [
+    4097,
+    10
+   ]
+  },
+  "theme/full/edge.png": {
+   "png": [
+    4096,
+    4096
+   ]
+  },
+  "theme/full/heavy.png": {
+   "png": [
+    64,
+    64
+   ],
+   "size": 16777217
+  },
+  "theme/full/empty.png": {
+   "bytes": 0
+  },
+  "theme/full/mascot.png": {
+   "png": [
+    864,
+    488
+   ]
+  },
+  "theme/full/icons/keep.png": {
+   "png": [
+    1,
+    1
+   ]
+  },
+  "theme/full/zero.png": {
+   "png": [
+    0,
+    5
+   ]
+  },
+  "theme/nobg/theme.json": {
+   "json": {
+    "name": "No Background",
+    "colors": {
+     "accent": "#FF00FF"
+    },
+    "images": {
+     "background": ""
+    }
+   }
+  },
+  "theme/both.json": {
+   "json": {
+    "name": "Both Keys",
+    "images": {
+     "background": "",
+     "background.jpg": "bgfile.png",
+     "logo.png": "zero.png"
+    }
+   }
+  },
+  "theme/bgfile.png": {
+   "png": [
+    1280,
+    720
+   ]
+  },
+  "theme/zero.png": {
+   "png": [
+    0,
+    5
+   ]
+  },
+  "theme/colorbg.json": {
+   "json": {
+    "name": "Colour Only",
+    "colors": {
+     "background": "#101827"
+    }
+   }
+  },
+  "theme/alpha.json": {
+   "json": {
+    "name": "Alpha Tints",
+    "colors": {
+     "panel": "#11223380",
+     "accent": "#AA000040",
+     "muted_text": "#CCCCCC80",
+     "text": "#EEEEEE"
+    }
+   }
+  },
+  "theme/accentonly.json": {
+   "json": {
+    "name": "Accent Only",
+    "colors": {
+     "accent": "#33CC99"
+    }
+   }
+  },
+  "theme/colors.json": {
+   "json": {
+    "name": "Colour Matrix",
+    "colors": {
+     "c00": "#fff",
+     "c01": "#FFF",
+     "c02": "#ffffff",
+     "c03": "#FFFFFF",
+     "c04": "#ffffff80",
+     "c05": "#FFFFFF80",
+     "c06": "FFFFFF",
+     "c07": "#FFFFFF8",
+     "c08": "#FFFFFFF",
+     "c09": "#1234567",
+     "c10": "#GGGGGG",
+     "c11": "#12 456",
+     "c12": "#-12345",
+     "c13": "#+12345",
+     "c14": " #123456",
+     "c15": "#123456 ",
+     "c16": "#0x1234",
+     "c17": "#000000",
+     "c18": "#00000000",
+     "c19": "#7F7F7F7F",
+     "c20": "#aBcDeF",
+     "c21": "#aBcDeF12",
+     "c22": "red",
+     "c23": "",
+     "c24": 123,
+     "c25": null,
+     "c26": true,
+     "c27": {
+      "r": 1
+     },
+     "c28": [
+      "#FFFFFF"
+     ],
+     "c29": "#FFFFFFFFFF",
+     "c30": "#éééé"
+    }
+   }
+  },
+  "theme/version-str.json": {
+   "json": {
+    "name": "Version String",
+    "version": "1.0.0"
+   }
+  },
+  "theme/version-one-str.json": {
+   "json": {
+    "name": "Version One String",
+    "version": "1"
+   }
+  },
+  "theme/version-float.json": {
+   "text": "{\"name\":\"Version Float\",\"version\":1.0}"
+  },
+  "theme/version-two.json": {
+   "json": {
+    "name": "Version Two",
+    "version": 2
+   }
+  },
+  "theme/version-true.json": {
+   "json": {
+    "name": "Version True",
+    "version": true
+   }
+  },
+  "theme/disabled.json": {
+   "json": {
+    "name": "Disabled",
+    "enabled": false
+   }
+  },
+  "theme/enabled-str.json": {
+   "json": {
+    "name": "Enabled String",
+    "enabled": "true"
+   }
+  },
+  "theme/enabled-one.json": {
+   "json": {
+    "name": "Enabled One",
+    "enabled": 1
+   }
+  },
+  "theme/array.json": {
+   "text": "[]"
+  },
+  "theme/broken.json": {
+   "text": "{ \"name\": \"Broken\", }"
+  },
+  "theme/empty.json": {
+   "bytes": 0
+  },
+  "theme/bom.json": {
+   "text": "﻿{\"name\":\"Has BOM\"}"
+  },
+  "theme/dup.json": {
+   "text": "{\"name\":\"First\",\"name\":\"Second\"}"
+  },
+  "theme/huge.json": {
+   "head": "{\"name\":\"Huge\",\"pad\":\"",
+   "tail": "\"}",
+   "size": 262145
+  },
+  "theme/limit.json": {
+   "head": "{\"name\":\"At Limit\",\"pad\":\"",
+   "tail": "\"}",
+   "size": 262144
+  },
+  "theme/name80.json": {
+   "json": {
+    "name": "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+   }
+  },
+  "theme/name81.json": {
+   "json": {
+    "name": "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+   }
+  },
+  "theme/name-multibyte.json": {
+   "json": {
+    "name": "ééééééééééééééééééééééééééééééééééééééééé"
+   }
+  },
+  "theme/name-empty.json": {
+   "json": {
+    "name": ""
+   }
+  },
+  "theme/name-number.json": {
+   "json": {
+    "name": 42
+   }
+  },
+  "theme/noname/theme.json": {
+   "json": {
+    "colors": {
+     "accent": "#123456"
+    }
+   }
+  },
+  "theme/notheme/readme.txt": {
+   "text": "no manifest here"
+  },
+  "theme/deep/inner/theme.json": {
+   "json": {
+    "name": "Too Deep"
+   }
+  },
+  "theme/dir.json/theme.json": {
+   "json": {
+    "name": "Folder Named Dot Json"
+   }
+  },
+  "theme/README.txt": {
+   "text": "not a theme"
+  },
+  "theme/UPPER.JSON": {
+   "json": {
+    "name": "Upper Extension"
+   }
+  },
+  "theme/.json": {
+   "json": {
+    "name": "Dot Json"
+   }
+  },
+  "theme/.hidden.json": {
+   "json": {
+    "name": "Hidden"
+   }
+  },
+  "theme/colon:name.json": {
+   "json": {
+    "name": "Colon"
+   }
+  },
+  "theme/Zed.json": {
+   "json": {
+    "name": "alpha"
+   }
+  },
+  "theme/Ann.json": {
+   "json": {
+    "name": "alpha"
+   }
+  },
+  "theme/Bob.json": {
+   "json": {
+    "name": "Zebra"
+   }
+  },
+  "theme/unicode.json": {
+   "json": {
+    "name": "Éclair"
+   }
+  },
+  "theme/emoji.json": {
+   "json": {
+    "name": "😀 smile"
+   }
+  },
+  "theme/ideo.json": {
+   "json": {
+    "name": "Ａ wide"
+   }
+  },
+  "escape.json": {
+   "json": {
+    "name": "Escaped"
+   }
+  }
+ },
+ "loads": [
+  "full/theme.json",
+  "nobg/theme.json",
+  "both.json",
+  "colorbg.json",
+  "alpha.json",
+  "accentonly.json",
+  "colors.json",
+  "version-str.json",
+  "version-float.json",
+  "bom.json",
+  "dup.json",
+  "name81.json",
+  "noname/theme.json",
+  "limit.json",
+  "huge.json",
+  "missing.json",
+  "",
+  "../escape.json",
+  "a\\b.json",
+  "C:/x.json",
+  "/theme/full/theme.json",
+  "full/theme.json/",
+  "notheme/theme.json",
+  "UPPER.JSON",
+  "dir.json/theme.json",
+  "deep/inner/theme.json",
+  "full/../alpha.json"
+ ],
+ "colorKeys": [
+  "c00",
+  "c01",
+  "c02",
+  "c03",
+  "c04",
+  "c05",
+  "c06",
+  "c07",
+  "c08",
+  "c09",
+  "c10",
+  "c11",
+  "c12",
+  "c13",
+  "c14",
+  "c15",
+  "c16",
+  "c17",
+  "c18",
+  "c19",
+  "c20",
+  "c21",
+  "c22",
+  "c23",
+  "c24",
+  "c25",
+  "c26",
+  "c27",
+  "c28",
+  "c29",
+  "c30"
+ ],
+ "roles": [
+  "background",
+  "header",
+  "footer",
+  "panel",
+  "text",
+  "selected_text",
+  "muted_text",
+  "accent",
+  "highlight",
+  "scrollbar",
+  "progress_track",
+  "nonsense"
+ ],
+ "fallbacks": [
+  "#170909FF",
+  "#17090980",
+  "#FF4D4D88",
+  "#00000033",
+  "#FFFFFF33",
+  "#000000FF",
+  "#FFFFFFFF"
+ ],
+ "palette": [
+  "#FFFFFFFF",
+  "#FFFFFF33",
+  "#FFFFFF66",
+  "#FFFFFF55",
+  "#000000FF",
+  "#17090980",
+  "#FF4D4DFF",
+  "#FFFFFF00",
+  "#FF3B30FF",
+  "#4CD964FF",
+  "#170909FF",
+  "#00000033",
+  "#A8A8B8FF",
+  "#00000000",
+  "#170909EE",
+  "#170909CC",
+  "#000000EE",
+  "#FFFFFF18",
+  "#222228FF",
+  "#17171CF5",
+  "#00000070",
+  "#FFFFFFCC",
+  "#FFFFFF99",
+  "#FFFFFF88",
+  "#FFFFFF40",
+  "#FF9999FF",
+  "#FF7777FF",
+  "#FF4D4D88",
+  "#FF4D4D66",
+  "#E9FFF2FF",
+  "#542329FF",
+  "#34C759FF",
+  "#34C75966",
+  "#303030FF",
+  "#222222FF",
+  "#1A1A1ACC",
+  "#170909FA",
+  "#170909A0",
+  "#101010CC",
+  "#000000FA",
+  "#000000CC",
+  "#00000088",
+  "#00000022",
+  "#ffffffff",
+  "#FFFFFF",
+  "#FFFFFFFE",
+  "#222222"
+ ],
+ "assets": [
+  "romfs:/images/background.jpg",
+  "romfs:/images/logo.png",
+  "romfs:/images/icons/settings.png",
+  "romfs:/images/icons/folder.png",
+  "romfs:/images/icons/remote.png",
+  "romfs:/images/icons/micro-sd.png",
+  "romfs:/images/icons/usb-port.png",
+  "romfs:/images/icons/exit-run.png",
+  "romfs:/images/icons/wrench.png",
+  "romfs:/images/icons/cloud-download.png",
+  "romfs:/images/icons/usb-install.png",
+  "romfs:/images/icons/folder-upload.png",
+  "romfs:/images/icons/save-data-cloud.png",
+  "romfs:/images/icons/title-placeholder.png",
+  "romfs:/images/awoos/5bbdbcf9a5625cd307c9e9bc360d78bd.png",
+  "romfs:/images/icons/check-box-outline.png",
+  "romfs:/images/not-a-real-slot.png",
+  "romfs:/images/",
+  "romfs:/images",
+  "sdmc:/switch/x.png",
+  "romfs:/images/icons/../logo.png"
+ ]
+}

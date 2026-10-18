@@ -3,17 +3,19 @@
 // just needs to cache those files plus the PWA icons/manifests — there's no
 // separate build output to track.
 //
-// Two editors, two manifests, one scope: the Tinfoil editor and the RomM
-// Switch client editor install as separate apps from the same origin, and
-// either one being open is enough to cache both.
+// Three editors, three manifests, one scope: the Tinfoil, RomM and CyberFoil
+// editors install as separate apps from the same origin, and any one of them
+// being open is enough to cache all three.
 
-const CACHE_NAME = 'aramaki-theme-editors-v5';
+const CACHE_NAME = 'aramaki-theme-editors-v6';
 const ASSETS = [
   './index.html',
   './tinfoil-theme-editor.html',
   './manifest.json',
   './romm-theme-editor.html',
   './manifest-romm.json',
+  './cyberfoil-theme-editor.html',
+  './manifest-cyberfoil.json',
   './assets/logo.png',
   './icons/icon-192.png',
   './icons/icon-512.png',

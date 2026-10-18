@@ -62,3 +62,49 @@ drops the alpha, silently making a translucent surface opaque.
 ```bash
 node tests/check-color-alpha.mjs
 ```
+
+## `check-cyberfoil.mjs`
+
+The CyberFoil editor's checks and preview stand on a port of CyberFoil's
+theme loader, `source/util/theme.cpp` in
+[luketanti/CyberFoil](https://github.com/luketanti/CyberFoil). This holds the
+port to the C++ the same way `check-motion.mjs` does for the RomM client:
+
+```bash
+node tests/check-cyberfoil.mjs
+```
+
+`cyberfoil/cases.json` describes a theme folder — 58 files, valid and broken —
+plus colour strings, fallbacks and asset paths. `cyberfoil/dump_theme.cpp`
+compiles CyberFoil's own `theme.cpp`, unmodified, against the stubs in
+`cyberfoil/stubs/` (Plutonium's `Color::FromHex` copied verbatim, a PNG-header
+`IMG_Load`, no libnx), writes the folder to disk and prints every decision the
+loader makes; `cyberfoil/reference.txt` is that output. CyberFoil is not our
+repository, so the dump tool lives here, and is run from a CyberFoil checkout:
+
+```bash
+g++ -std=c++17 -I../Theme-App/tests/cyberfoil/stubs -Iinclude -I. \
+    ../Theme-App/tests/cyberfoil/dump_theme.cpp -o /tmp/dumpcf \
+  && /tmp/dumpcf ../Theme-App/tests/cyberfoil/cases.json \
+     > ../Theme-App/tests/cyberfoil/reference.txt
+```
+
+The cases are the edges the format actually has: a name measured in UTF-8
+bytes rather than characters, `"version": 1.0` accepted where `"1"` is not,
+an extension test that treats `.json` alone as having none, object keys
+visited in byte order (which decides `background` against `background.jpg`),
+and a default's alpha multiplied into a theme colour with integer division.
+
+## `check-cyberfoil-export.mjs`
+
+Points that proven loader at the editor's own output. A RomM theme carrying
+everything CyberFoil cannot — motion, a sprite sheet, a focus effect, music —
+is converted and exported, and the pack must be listed by the picker under
+its name, keep all 11 colours and every image, carry the background darkened
+by its own `dim` in the pixels, report each thing it left behind, and read
+back to the same `theme.json`. Every starting palette must also pass the
+readability checks.
+
+```bash
+node tests/check-cyberfoil-export.mjs
+```
