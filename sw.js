@@ -7,7 +7,7 @@
 // editors install as separate apps from the same origin, and any one of them
 // being open is enough to cache all three.
 
-const CACHE_NAME = 'aramaki-theme-editors-v6';
+const CACHE_NAME = 'aramaki-theme-editors-v7';
 const ASSETS = [
   './index.html',
   './tinfoil-theme-editor.html',

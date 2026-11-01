@@ -4,7 +4,7 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
-## Unreleased
+## 2.6.0
 
 - **Palette from an image, in the CyberFoil editor.** The Tinfoil editor's
   flow: *Extract palette from background* (or *Browse local image*) shows the
@@ -20,6 +20,9 @@ one place release notes are written.
   with a *Fetch through images.weserv.nl* button, the Tinfoil editor's proxy
   — used only when pressed, since the proxy sees the address. A wallpaper
   that arrives gets the same legibility pass as one in the zip.
+- **Installed copies update.** The offline cache is renamed, so an editor
+  installed as an app picks up this release instead of serving the last one
+  it cached.
 
 ## 2.5.1
 
