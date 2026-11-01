@@ -108,3 +108,17 @@ readability checks.
 ```bash
 node tests/check-cyberfoil-export.mjs
 ```
+
+## `check-cyberfoil-extract.mjs`
+
+The CyberFoil editor's palette-from-image flow. Proves extraction is
+deterministic and finds the regions of a known image (not the anti-aliased
+fringe between them), that a flat image gives one swatch, that the extract
+button follows the Background panel, that both entry points end in all
+eleven roles set, that pale images give light palettes, and that 24
+generated images, each used as its own wallpaper, produce palettes with no
+readability errors.
+
+```bash
+node tests/check-cyberfoil-extract.mjs
+```

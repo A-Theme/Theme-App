@@ -4,6 +4,17 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
+## Unreleased
+
+- **Palette from an image, in the CyberFoil editor.** The Tinfoil editor's
+  flow: *Extract palette from background* (or *Browse local image*) shows the
+  picture's dominant colours as swatches, and *Use this palette* turns them
+  into all eleven roles. The swatches go through the same RomM mapping the
+  starting palettes use, a pale image gives a light palette, and text and
+  accent are pushed until they clear the contrast bar — across 24 generated
+  test images used as their own wallpaper, none trips a readability error.
+  Extraction is deterministic: the same image always gives the same swatches.
+
 ## 2.5.1
 
 - **Tinfoil wallpapers are scaled to the screen.** CyberFoil draws a
