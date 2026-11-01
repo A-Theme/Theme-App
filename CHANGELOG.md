@@ -14,6 +14,12 @@ one place release notes are written.
   accent are pushed until they clear the contrast bar — across 24 generated
   test images used as their own wallpaper, none trips a readability error.
   Extraction is deterministic: the same image always gives the same swatches.
+- **Web images in Tinfoil conversions.** A Tinfoil theme whose wallpaper or
+  logo is a web URL lost it in the CyberFoil editor whenever the host sent no
+  CORS headers, which is most of them. The import report now lists each one
+  with a *Fetch through images.weserv.nl* button, the Tinfoil editor's proxy
+  — used only when pressed, since the proxy sees the address. A wallpaper
+  that arrives gets the same legibility pass as one in the zip.
 
 ## 2.5.1
 

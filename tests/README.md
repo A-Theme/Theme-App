@@ -122,3 +122,15 @@ readability errors.
 ```bash
 node tests/check-cyberfoil-extract.mjs
 ```
+
+## `check-cyberfoil-web-images.mjs`
+
+A Tinfoil theme whose wallpaper and logo are web URLs on a host with no CORS
+headers. Routes stand in for that host, for images.weserv.nl, and for an
+image the proxy cannot fetch either, so nothing real is contacted. Proves the
+proxy is never used until its button is pressed, that pressing it brings in
+both images, and that one it cannot fetch stays listed and says so.
+
+```bash
+node tests/check-cyberfoil-web-images.mjs
+```

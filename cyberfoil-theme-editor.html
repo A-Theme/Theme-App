@@ -1785,12 +1785,23 @@ function renderReport(){
   if (!r){ el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = `<b>Converted from the ${esc(r.kind || 'RomM')} theme "${esc(r.from)}".</b> ` +
-    'CyberFoil has no slot for these, so they stay behind:' +
-    `<ul>${r.dropped.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` +
+    (r.dropped.length ? 'CyberFoil has no slot for these, so they stay behind:' +
+      `<ul>${r.dropped.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : '<br>') +
     (r.adjusted && r.adjusted.length ? 'Adjusted so it reads in CyberFoil\'s layout:' +
       `<ul>${r.adjusted.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : '') +
+    (r.remote && r.remote.length ? 'Web images the browser was not allowed to download:' +
+      `<ul>${r.remote.map(x => `<li>the ${x.slot === 'bg' ? 'background' : 'logo'} at <code>${esc(x.ref)}</code>` +
+        (x.failed ? ' - the proxy could not fetch it either; the host may be gone' : '') + '</li>').join('')}</ul>` +
+      '<button id="reportProxy" style="margin:4px 8px 0 0;">Fetch through images.weserv.nl</button>' +
+      '<span class="hint">Its host sends no CORS headers, so the page cannot read it directly. ' +
+      'The proxy re-serves it with them; it sees the image address, nothing else.</span><br>' : '') +
     '<button class="ghost" id="reportClose" style="margin-top:8px;">Dismiss</button>';
   $('reportClose').addEventListener('click', () => { state.report = null; render(); });
+  const px = $('reportProxy');
+  if (px) px.addEventListener('click', async () => {
+    px.disabled = true; px.textContent = 'Fetching\u2026';
+    await retryRemoteImages();
+  });
 }
 
 /** The extract row follows the Background panel: enabled once there is an image. */
@@ -2209,12 +2220,17 @@ async function importTinfoil(doc, fetchFile, folder, extras){
     }
     return fetchFile(splitPath(ref).base);
   };
+  /* A web image that will not download goes on `remote` rather than
+     `missing`: the report offers to retry it through an image proxy. */
+  const remote = [];
+  const isWeb = ref => typeof ref === 'string' && /^https?:\/\//i.test(ref);
   const bgRef = get('background', 'image');
   const bgUrl = await resolve(bgRef);
   if (bgUrl){ Object.assign(state.bg, await fitWallpaper(await assetFromDataUrl(splitPath(bgRef).base, bgUrl)), {mode: 'image', dim: 0}); }
   else {
     state.bg.mode = 'none';
-    if (typeof bgRef === 'string' && bgRef) missing.push(/^https?:/i.test(bgRef) ? `the background at ${bgRef} (could not be downloaded)` : splitPath(bgRef).base);
+    if (isWeb(bgRef)) remote.push({slot: 'bg', ref: bgRef});
+    else if (typeof bgRef === 'string' && bgRef) missing.push(splitPath(bgRef).base);
   }
   const logoRef = get('logo');
   const logoUrl = await resolve(logoRef);
@@ -2222,7 +2238,8 @@ async function importTinfoil(doc, fetchFile, folder, extras){
   if (logo){ Object.assign(state.banner, logo, {mode: 'image'}); }
   else {
     state.banner.mode = 'generate';
-    if (typeof logoRef === 'string' && logoRef) missing.push(/^https?:/i.test(logoRef) ? `the logo at ${logoRef} (could not be downloaded) - a banner is drawn instead` : splitPath(logoRef).base);
+    if (isWeb(logoRef) && !logoUrl) remote.push({slot: 'logo', ref: logoRef});
+    else if (typeof logoRef === 'string' && logoRef) missing.push(isWeb(logoRef) ? `the logo at ${logoRef} - a banner is drawn instead` : splitPath(logoRef).base);
   }
   state.hideMascots = true;
 
@@ -2237,7 +2254,42 @@ async function importTinfoil(doc, fetchFile, folder, extras){
   if (missing.length) dropped.push(`files that could not be read: ${missing.join(', ')}`);
   const adjusted = [];
   await raiseForLegibility(adjusted);
-  state.report = {kind: 'Tinfoil', from: who.name, dropped, adjusted};
+  state.report = {kind: 'Tinfoil', from: who.name, dropped, adjusted, remote};
+}
+
+/* ---------------------------------------------------------------------------
+   Web images through a proxy. Many Tinfoil themes point their wallpaper or
+   logo at the author's own web host, and a browser will only hand a page the
+   bytes when that host sends CORS headers - most never did, so the direct
+   download fails. images.weserv.nl re-serves any image with those headers.
+   It is a third party seeing the address, so - as in the Tinfoil editor - it
+   is only ever used when you press the button, and the button says so.
+   --------------------------------------------------------------------------- */
+const proxyImageUrl = url => 'https://images.weserv.nl/?url=' + encodeURIComponent(url.replace(/^https?:\/\//i, ''));
+async function retryRemoteImages(){
+  const r = state.report;
+  if (!r || !r.remote || !r.remote.length) return;
+  const left = [];
+  for (const item of r.remote){
+    const name = splitPath(item.ref.split('?')[0]).base;
+    let url = null;
+    try { url = await fetchDataUrl(proxyImageUrl(item.ref), name, 20000); } catch (e) {}
+    if (url && item.slot === 'bg'){
+      const a = await assetFromDataUrl(name, url);
+      if (a.decoded){ Object.assign(state.bg, blankAsset(), await fitWallpaper(a), {mode: 'image', dim: 0}); continue; }
+    }
+    if (url && item.slot === 'logo'){
+      const logo = await bannerFromLogo(url);
+      if (logo){ Object.assign(state.banner, logo, {mode: 'image'}); continue; }
+    }
+    left.push(Object.assign({}, item, {failed: true}));
+  }
+  r.remote = left;
+  /* A wallpaper that arrived changes what the text sits on. */
+  const adjusted = [];
+  await raiseForLegibility(adjusted);
+  r.adjusted = (r.adjusted || []).concat(adjusted.filter(a => !(r.adjusted || []).includes(a)));
+  render();
 }
 
 async function importBundle(bundle, folderGuess){
