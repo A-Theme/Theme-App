@@ -4,6 +4,18 @@ Notable changes per release. The release workflow reads the section matching
 the version being built and uses it as the release body, so this file is the
 one place release notes are written.
 
+## Unreleased
+
+- **Rotating web wallpapers, kept for CyberFoil.** Many Tinfoil themes point
+  their wallpaper at a server that returns a different picture each time.
+  A Tinfoil conversion now keeps those addresses as `remote_images` in the
+  CyberFoil theme, whether or not the browser could download them, and
+  *Web wallpaper* / *Web logo* fields under Background and Banner set one by
+  hand. CyberFoil builds with web-image support
+  ([A-Theme/CyberFoil#1](https://github.com/A-Theme/CyberFoil/pull/1))
+  download it on the console every launch; older builds ignore it and show
+  the bundled image, which the checks now warn about when there is none.
+
 ## 2.6.0
 
 - **Palette from an image, in the CyberFoil editor.** The Tinfoil editor's

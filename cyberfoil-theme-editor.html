@@ -120,7 +120,7 @@
     padding:7px 8px;border-radius:6px;font-size:12.5px;font-family:var(--mono);text-transform:uppercase;
   }
   .crow input.hex::placeholder{color:var(--text-2);text-transform:none;}
-  .crow input.hex.bad{border-color:var(--bad);}
+  .crow input.hex.bad, input[type=text].bad{border-color:var(--bad);}
   .crow input.alpha{
     flex:0 0 78px;-webkit-appearance:none;appearance:none;height:14px;margin:0;
     border-radius:7px;border:1px solid var(--line);cursor:pointer;background:
@@ -315,6 +315,12 @@
               darkens the image itself when it exports: <code>c &times; (1 &minus; dim)</code>, the same multiply
               the RomM client applies. Author at 1280&times;720 &mdash; the image is drawn at its own size, not scaled.</span></div>
           </div>
+          <div class="field"><label for="bgRemote">Web wallpaper</label>
+            <input type="text" id="bgRemote" placeholder="https://&hellip; (optional)" spellcheck="false" autocomplete="off"></div>
+          <div class="field"><label></label><span class="hint" id="bgRemoteHint">A web address CyberFoil downloads on the console
+            each launch and shows on the next &mdash; a server that answers with a random picture gives a new wallpaper every
+            time. Needs a CyberFoil build with web-image support; the wallpaper above is what shows until the first download,
+            offline, and on older builds. Written as <code>remote_images</code>.</span></div>
         </div>
       </div>
 
@@ -343,6 +349,10 @@
           </div>
           <div class="field"><label></label><span class="hint">Drawn at 0,&minus;8 and fitted to 480&times;93 whatever its size,
             so a banner of any other shape is stretched.</span></div>
+          <div class="field"><label for="bnRemote">Web logo</label>
+            <input type="text" id="bnRemote" placeholder="https://&hellip; (optional)" spellcheck="false" autocomplete="off"></div>
+          <div class="field"><label></label><span class="hint" id="bnRemoteHint">As for the wallpaper: fetched on the console each
+            launch by CyberFoil builds with web-image support, with the banner above as the fallback.</span></div>
         </div>
       </div>
 
@@ -967,6 +977,22 @@ function paletteFromSwatches(sw){
   return out;
 }
 
+/* ===========================================================================
+   remote_images - web images CyberFoil itself downloads, on the console, each
+   launch (A-Theme/CyberFoil, util/theme_remote.cpp). The console has no CORS,
+   so an address the browser cannot read still works there. The rule below is
+   that file's IsWebUrl, so the editor accepts exactly what CyberFoil will.
+   =========================================================================== */
+function cfIsWebUrl(url){
+  if (typeof url !== 'string' || url.length > 2048) return false;
+  const https = url.startsWith('https://');
+  if (!https && !url.startsWith('http://')) return false;
+  if (url.length <= (https ? 8 : 7)) return false;
+  for (let i = 0; i < url.length; i++){ const c = url.charCodeAt(i); if (c <= 0x20 || c >= 0x7F) return false; }
+  return true;
+}
+const REMOTE_SLOTS = ['background', 'logo'];
+
 /* Starting palettes: the RomM editor's twenty, mapped the same way - so a
    theme that exists in both formats starts from the same look in both. */
 const ROMM_PRESETS = {
@@ -1001,6 +1027,7 @@ const state = {
   banner: Object.assign(blankAsset(), {mode:'builtin'}),
   bannerFont: {name:'', dataUrl:''},
   images: {},                    /* slot key -> asset */
+  remote: {},                    /* "remote_images": slot ('background', 'logo') -> web URL */
   hideMascots: false,            /* swap CyberFoil's mascots for a clear pixel */
   oled:   false,
   noAnime: false,                /* CyberFoil's "Remove anime" setting, for the preview */
@@ -1136,6 +1163,9 @@ function buildPack(){
       put(s.k, 'mascot-none.png', {dataUrl: CLEAR_PIXEL, size: dataUrlSize(CLEAR_PIXEL), decoded: true, w: 1, h: 1, type: 'image/png'});
   }
   if (Object.keys(images).length) doc.images = images;
+  const remote = {};
+  for (const k of REMOTE_SLOTS) if (cfIsWebUrl(state.remote[k])) remote[k] = state.remote[k];
+  if (Object.keys(remote).length) doc.remote_images = remote;
   return {doc, files, text: JSON.stringify(doc, null, 2) + '\n'};
 }
 
@@ -1592,6 +1622,18 @@ function renderChecks(){
                 'shows instead of the built-in one, as it always has. OLED mode shows neither.');
   }
 
+  for (const k of REMOTE_SLOTS){
+    const url = state.remote[k];
+    if (!url) continue;
+    const what = k === 'background' ? 'wallpaper' : 'logo';
+    const fallback = k === 'background' ? state.bg.mode === 'image' && state.bg.dataUrl : state.banner.mode !== 'builtin';
+    add('info', `Web ${what} <code>${esc(url)}</code>: CyberFoil with web-image support downloads it on the console each launch ` +
+      'and shows it on the next. Older builds ignore it.');
+    if (!fallback && k === 'background')
+      add('warn', 'The web wallpaper has no bundled image behind it, so the first launch, offline launches and older CyberFoil ' +
+        'builds show only the background colour. Choosing an image above gives them one.');
+  }
+
   /* ---- 3. Readability, on the colours CyberFoil will actually composite ---- */
   const bgc = cfApplyBackground(st, oled, false);
   let backdrop = withAlpha(bgc.color, 255);
@@ -1760,6 +1802,8 @@ function pushStateToInputs(){
   $('bgMode').value = state.bg.mode;
   $('bgDim').value = state.bg.dim;
   $('bnMode').value = state.banner.mode;
+  $('bgRemote').value = state.remote.background || '';
+  $('bnRemote').value = state.remote.logo || '';
   $('oled').checked = state.oled;
   $('hideMascots').checked = state.hideMascots;
   $('noAnime').checked = state.noAnime;
@@ -1789,7 +1833,9 @@ function renderReport(){
       `<ul>${r.dropped.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : '<br>') +
     (r.adjusted && r.adjusted.length ? 'Adjusted so it reads in CyberFoil\'s layout:' +
       `<ul>${r.adjusted.map(d => `<li>${esc(d)}</li>`).join('')}</ul>` : '') +
-    (r.remote && r.remote.length ? 'Web images the browser was not allowed to download:' +
+    (r.remote && r.remote.length ? 'Web images the browser was not allowed to download. Their addresses are kept as ' +
+      '<code>remote_images</code>, so CyberFoil with web-image support still fetches them on the console each launch; ' +
+      'fetching one here as well gives the theme a bundled copy to show before that, offline, and on older builds:' +
       `<ul>${r.remote.map(x => `<li>the ${x.slot === 'bg' ? 'background' : 'logo'} at <code>${esc(x.ref)}</code>` +
         (x.failed ? ' - the proxy could not fetch it either; the host may be gone' : '') + '</li>').join('')}</ul>` +
       '<button id="reportProxy" style="margin:4px 8px 0 0;">Fetch through images.weserv.nl</button>' +
@@ -1985,6 +2031,7 @@ function resetState(){
   state.banner = Object.assign(blankAsset(), {mode:'builtin'});
   state.bannerFont = {name:'', dataUrl:''};
   state.images = {};
+  state.remote = {};
   state.hideMascots = false;
   state.report = null;
 }
@@ -2018,6 +2065,13 @@ async function importCyberFoil(doc, fetchFile){
     else if (target === 'banner'){ Object.assign(state.banner, a, {mode: 'image'}); }
     else if (MASCOT_SLOTS.includes(target) && a.w === 1 && a.h === 1) state.hideMascots = true;
     else state.images[target] = a;
+  }
+  const remote = doc.remote_images && typeof doc.remote_images === 'object' ? doc.remote_images : {};
+  for (const [k0, v] of Object.entries(remote)){
+    const k = k0 === 'background.jpg' ? 'background' : k0 === 'logo.png' ? 'logo' : k0;
+    if (!REMOTE_SLOTS.includes(k)) { ignored.push(`remote_images["${k0}"] (the editor keeps background and logo only)`); continue; }
+    if (!cfIsWebUrl(v)) { ignored.push(`remote_images["${k0}"] (not an http(s) address CyberFoil accepts)`); continue; }
+    state.remote[k] = v;
   }
   return {missing, ignored};
 }
@@ -2225,6 +2279,11 @@ async function importTinfoil(doc, fetchFile, folder, extras){
   const remote = [];
   const isWeb = ref => typeof ref === 'string' && /^https?:\/\//i.test(ref);
   const bgRef = get('background', 'image');
+  /* The address is kept whatever happens to the download: CyberFoil with
+     web-image support fetches it on the console every launch, which is how
+     a Tinfoil theme on a random-image server keeps changing wallpaper. */
+  if (isWeb(bgRef) && cfIsWebUrl(bgRef)) state.remote.background = bgRef;
+  if (isWeb(get('logo')) && cfIsWebUrl(get('logo'))) state.remote.logo = get('logo');
   const bgUrl = await resolve(bgRef);
   if (bgUrl){ Object.assign(state.bg, await fitWallpaper(await assetFromDataUrl(splitPath(bgRef).base, bgUrl)), {mode: 'image', dim: 0}); }
   else {
@@ -2560,7 +2619,8 @@ function save(){
   try {
     const slim = {meta: state.meta, colors: state.colors, oled: state.oled, screen: state.screen, hideMascots: state.hideMascots, noAnime: state.noAnime,
                   bg: {mode: state.bg.mode === 'image' ? 'builtin' : state.bg.mode, dim: state.bg.dim},
-                  banner: {mode: state.banner.mode === 'image' ? 'builtin' : state.banner.mode}};
+                  banner: {mode: state.banner.mode === 'image' ? 'builtin' : state.banner.mode},
+                  remote: state.remote};
     localStorage.setItem(LS_KEY, JSON.stringify(slim));
   } catch (e) {}
 }
@@ -2578,6 +2638,8 @@ function load(){
     state.oled = s.oled === true;
     state.hideMascots = s.hideMascots === true;
     state.noAnime = s.noAnime === true;
+    if (s.remote && typeof s.remote === 'object')
+      for (const k of REMOTE_SLOTS) if (cfIsWebUrl(s.remote[k])) state.remote[k] = s.remote[k];
     if (['main', 'browser', 'queue', 'install'].includes(s.screen)) state.screen = s.screen;
   } catch (e) {}
 }
@@ -2682,6 +2744,12 @@ function init(){
   $('bgDim').addEventListener('input', () => { state.bg.dim = parseFloat($('bgDim').value); render(); });
   wireImage('bgFile', 'bgClear', 'bg', 'image');
   $('bnMode').addEventListener('change', () => { state.banner.mode = $('bnMode').value; render(); });
+  [['bgRemote', 'background'], ['bnRemote', 'logo']].forEach(([id, k]) => $(id).addEventListener('input', () => {
+    const v = $(id).value.trim();
+    $(id).classList.toggle('bad', !!v && !cfIsWebUrl(v));
+    if (cfIsWebUrl(v)) state.remote[k] = v; else delete state.remote[k];
+    render();
+  }));
   wireImage('bnFile', 'bnClear', 'banner', 'image');
   $('bnFont').addEventListener('change', async ev => {
     const f = ev.target.files && ev.target.files[0];
